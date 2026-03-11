@@ -2,7 +2,7 @@
 
 **GitFlow Editor** is a powerful, interactive Git simulation and educational tool designed to help developers master Git workflows visually. Instead of just reading about branches and merges, users can manipulate a live DAG (Directed Acyclic Graph) and see exactly how Git works under the hood.
 
-![Onboarding Tour](file:///home/laborant/.gemini/antigravity/brain/cdd9995e-aa08-409c-bfed-9ac268eb4a56/onboarding_step_1_1773237284524.png)
+![Onboarding Tour](public/screenshots/onboarding.png)
 
 ## 🚀 Key Features
 
@@ -96,11 +96,11 @@ npm run build
 ## 📸 Screenshots
 
 ### Advanced Lesson Picker
-![Lesson Picker](file:///home/laborant/.gemini/antigravity/brain/cdd9995e-aa08-409c-bfed-9ac268eb4a56/lesson_picker_1773237347621.png)
+![Lesson Picker](public/screenshots/lessons.png)
 
 ### Git Bisect Interface
-![Git Bisect](file:///home/laborant/.gemini/antigravity/brain/cdd9995e-aa08-409c-bfed-9ac268eb4a56/git_bisect_panel_1773237642461.png)
+![Git Bisect](public/screenshots/bisect.png)
 
 ### Keyboard Shortcuts
-![Shortcuts](file:///home/laborant/.gemini/antigravity/brain/cdd9995e-aa08-409c-bfed-9ac268eb4a56/keyboard_shortcuts_1773237455292.png)
+![Shortcuts](public/screenshots/shortcuts.png)
 
