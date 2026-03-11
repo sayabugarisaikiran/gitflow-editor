@@ -243,4 +243,72 @@ export const SCENARIOS: ScenarioDefinition[] = [
             ],
         },
     },
+    {
+        difficulty: 'advanced',
+        description: 'DISTRESS SCENARIO 1: A developer accidentally force-pushed, orchestrating a massive loss of history. Restore it using the Undo mechanism.',
+        objective: 'Restore the orphaned commits using the Undo time-travel button to mimic a reflog recovery.',
+        hints: [
+            'Notice your HEAD is heavily rewound.',
+            'Click the Undo button to un-execute the force push.',
+        ],
+        scenario: {
+            id: 'distress-force-push',
+            name: '🚨 The Force Push',
+            commits: [
+                { hash: h1, message: 'Initial commit', parentHashes: [], timestamp: Date.now() - 50000, branch: 'main' },
+                { hash: h2, message: 'Setup Auth Service', parentHashes: [h1], timestamp: Date.now() - 40000, branch: 'main' },
+            ],
+            branches: { main: h2 },
+            tags: {},
+            HEAD: h2,
+            currentBranch: 'main',
+            files: [{ name: 'auth.ts', status: 'unmodified' }],
+        },
+    },
+    {
+        difficulty: 'advanced',
+        description: 'DISTRESS SCENARIO 2: An AWS access key was just committed and pushed! Scrub it from history quickly.',
+        objective: 'Soft reset the last commit, unstage the file to fix it, and re-commit safely.',
+        hints: [
+            'Type: git reset --soft HEAD~1',
+            'Type: git commit -m "chore: remove secrets"',
+        ],
+        scenario: {
+            id: 'distress-leaked-secret',
+            name: '🔑 The Leaked Secret',
+            commits: [
+                { hash: h1, message: 'Initial commit', parentHashes: [], timestamp: Date.now() - 10000, branch: 'main' },
+                { hash: h2, message: 'feat: add AWS S3 upload service (with hardcoded keys)', parentHashes: [h1], timestamp: Date.now(), branch: 'main' },
+            ],
+            branches: { main: h2 },
+            tags: {},
+            HEAD: h2,
+            currentBranch: 'main',
+            files: [{ name: 's3.ts', status: 'unmodified' }],
+        },
+    },
+    {
+        difficulty: 'intermediate',
+        description: 'DISTRESS SCENARIO 3: The CI Pipeline is building an old version of the app because a Tag is stuck in the past.',
+        objective: 'Delete the stuck v1.0 tag and re-create it on the latest HEAD commit.',
+        hints: [
+            'Look at where the v1.0 tag is positioned in the graph.',
+            'Type: git tag -d v1.0',
+            'Type: git tag v1.0 HEAD',
+        ],
+        scenario: {
+            id: 'distress-ci-stuck',
+            name: '🏗️ CI Pipeline Stuck',
+            commits: [
+                { hash: h1, message: 'Release v1.0 initial', parentHashes: [], timestamp: Date.now() - 50000, branch: 'main' },
+                { hash: h2, message: 'Hotfix: padding issue', parentHashes: [h1], timestamp: Date.now() - 30000, branch: 'main' },
+                { hash: h3, message: 'Hotfix: null pointer crash', parentHashes: [h2], timestamp: Date.now() - 10000, branch: 'main' },
+            ],
+            branches: { main: h3 },
+            tags: { 'v1.0': h1 },
+            HEAD: h3,
+            currentBranch: 'main',
+            files: [{ name: 'app.ts', status: 'unmodified' }],
+        },
+    },
 ];
