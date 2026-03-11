@@ -72,7 +72,8 @@ function parseCommand(input: string): void {
                 { type: 'output', text: '  git stash pop            Restore stashed files', timestamp: Date.now() },
                 { type: 'output', text: '  git tag <name> [hash]    Create a tag', timestamp: Date.now() },
                 { type: 'output', text: '  git tag -d <name>        Delete a tag', timestamp: Date.now() },
-                { type: 'output', text: '  git reset --hard <hash>  Reset HEAD to commit', timestamp: Date.now() },
+                { type: 'output', text: '  git reset <mode> <hash>  Reset HEAD to commit', timestamp: Date.now() },
+                { type: 'output', text: '  git revert <hash>        Revert a commit', timestamp: Date.now() },
                 { type: 'output', text: '  clear                    Clear terminal', timestamp: Date.now() },
                 { type: 'output', text: '  help                     Show this help', timestamp: Date.now() },
             ],
@@ -115,12 +116,26 @@ function parseCommand(input: string): void {
             break;
 
         case 'reset':
-            if (parts[2] === '--hard' && parts[3]) {
-                store.resetHead(parts[3]);
+            if ((parts[2] === '--hard' || parts[2] === '--soft' || parts[2] === '--mixed') && parts[3]) {
+                store.reset(parts[2], parts[3]);
             } else if (parts[2] === 'HEAD' && parts[3]) {
                 store.unstageFile(parts[3]);
             } else if (parts[2]) {
                 store.unstageFile(parts[2]);
+            }
+            break;
+
+        case 'revert':
+            if (parts[2]) {
+                store.revert(parts[2]);
+            } else {
+                useGitStore.setState((state) => ({
+                    terminalHistory: [
+                        ...state.terminalHistory,
+                        { type: 'command', text: trimmed, timestamp: Date.now() },
+                        { type: 'error', text: 'usage: git revert <commit-hash>', timestamp: Date.now() },
+                    ],
+                }));
             }
             break;
 

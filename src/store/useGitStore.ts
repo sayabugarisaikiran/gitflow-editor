@@ -56,7 +56,8 @@ export interface GitState {
     createBranchAt: (name: string, commitHash: string) => void;
     merge: (sourceBranch: string) => void;
     rebase: (targetBranch: string) => void;
-    resetHead: (commitHash: string) => void;
+    reset: (mode: '--soft' | '--mixed' | '--hard', commitHash: string) => void;
+    revert: (commitHash: string) => void;
     deleteBranch: (name: string) => void;
     stash: () => void;
     stashPop: () => void;
@@ -271,7 +272,11 @@ export const useGitStore = create<GitState>((set, get) => ({
                     createTerminalLine('command', `git checkout ${branchOrHash}`),
                     createTerminalLine(
                         'output',
-                        `HEAD is now at ${branchOrHash}... (detached HEAD state)`
+                        `HEAD is now at ${branchOrHash}...`
+                    ),
+                    createTerminalLine(
+                        'info',
+                        `You are in 'detached HEAD' state.`
                     ),
                 ],
             });
@@ -627,7 +632,7 @@ export const useGitStore = create<GitState>((set, get) => ({
         });
     },
 
-    resetHead: (commitHash: string) => {
+    reset: (mode: '--soft' | '--mixed' | '--hard', commitHash: string) => {
         const state = get();
 
         const targetCommit = state.commits.find((c) => c.hash === commitHash);
@@ -635,7 +640,7 @@ export const useGitStore = create<GitState>((set, get) => ({
             set({
                 terminalHistory: [
                     ...state.terminalHistory,
-                    createTerminalLine('command', `git reset --hard ${commitHash}`),
+                    createTerminalLine('command', `git reset ${mode} ${commitHash}`),
                     createTerminalLine('error', `fatal: not a valid commit: ${commitHash}`),
                 ],
             });
@@ -647,14 +652,76 @@ export const useGitStore = create<GitState>((set, get) => ({
             updatedBranches[state.currentBranch] = commitHash;
         }
 
+        let newFiles = state.files;
+        if (mode === '--hard') {
+            newFiles = state.files.map((f) => ({ ...f, status: 'unmodified' as FileStatus }));
+        } else if (mode === '--mixed') {
+            newFiles = state.files.map((f) => 
+                f.status === 'staged' ? { ...f, status: 'modified' as FileStatus } : f
+            );
+        }
+
         set({
             HEAD: commitHash,
             branches: updatedBranches,
+            files: newFiles,
             terminalHistory: [
                 ...state.terminalHistory,
-                createTerminalLine('command', `git reset --hard ${commitHash}`),
+                createTerminalLine('command', `git reset ${mode} ${commitHash}`),
+                ...(mode !== '--soft' ? [createTerminalLine('output', `Unstaged changes after reset:`)] : []),
                 createTerminalLine('output', `HEAD is now at ${commitHash} ${targetCommit.message}`),
             ],
+        });
+    },
+
+    revert: (commitHash: string) => {
+        const state = get();
+        const targetCommit = state.commits.find(c => c.hash === commitHash);
+        
+        if (!targetCommit) {
+            set({
+                terminalHistory: [
+                    ...state.terminalHistory,
+                    createTerminalLine('command', `git revert ${commitHash}`),
+                    createTerminalLine('error', `fatal: bad object ${commitHash}`),
+                ]
+            });
+            return;
+        }
+
+        if (state.currentBranch === 'HEAD (detached)') {
+            set({
+                terminalHistory: [
+                    ...state.terminalHistory,
+                    createTerminalLine('command', `git revert ${commitHash}`),
+                    createTerminalLine('error', 'error: cannot revert in detached HEAD state.'),
+                ]
+            });
+            return;
+        }
+
+        const newHash = generateHash();
+        const newCommit: Commit = {
+            hash: newHash,
+            message: `Revert "${targetCommit.message}"`,
+            parentHashes: [state.HEAD],
+            timestamp: Date.now(),
+            branch: state.currentBranch,
+            filesChanged: targetCommit.filesChanged
+        };
+
+        set({
+            commits: [...state.commits, newCommit],
+            HEAD: newHash,
+            branches: {
+                ...state.branches,
+                [state.currentBranch]: newHash
+            },
+            terminalHistory: [
+                ...state.terminalHistory,
+                createTerminalLine('command', `git revert ${commitHash}`),
+                createTerminalLine('output', `[${state.currentBranch} ${newHash}] Revert "${targetCommit.message}"`)
+            ]
         });
     },
 
@@ -962,6 +1029,7 @@ export const useGitStore = create<GitState>((set, get) => ({
                 parentHashes: [newParent],
                 timestamp: Date.now(),
                 branch: state.currentBranch,
+                filesChanged: commit.filesChanged,
             });
             newParent = newHash;
         }

@@ -11,6 +11,7 @@ export interface CommitNodeData {
     tags: string[];
     timestamp: number;
     isMerge: boolean;
+    isOrphaned: boolean;
     [key: string]: unknown;
 }
 
@@ -68,10 +69,10 @@ function getBranchColor(branchName: string) {
 // ─── Custom Commit Node ─────────────────────────────────────────────────────
 
 function CustomCommitNode({ data }: NodeProps) {
-    const { hash, message, isHead, branches, tags, isMerge } = data as unknown as CommitNodeData;
+    const { hash, message, isHead, branches, tags, isMerge, isOrphaned } = data as unknown as CommitNodeData;
 
     return (
-        <div className="relative flex flex-col items-center group">
+        <div className={`relative flex flex-col items-center group transition-opacity duration-500 ${isOrphaned ? 'opacity-40 grayscale hover:opacity-100 hover:grayscale-0' : ''}`}>
             {/* Branch labels — floating tags above the node */}
             {branches.length > 0 && (
                 <div className="absolute -top-8 left-1/2 -translate-x-1/2 flex gap-1 whitespace-nowrap">
@@ -112,14 +113,15 @@ function CustomCommitNode({ data }: NodeProps) {
           text-[11px] font-mono font-bold cursor-pointer
           transition-all duration-300 ease-out
           group-hover:scale-110 group-hover:shadow-xl
-          ${isHead
+          ${isOrphaned 
+                        ? 'bg-slate-800 text-slate-400 border border-slate-600 border-dashed'
+                        : isHead
                         ? 'bg-gradient-to-br from-yellow-400 via-amber-500 to-orange-500 text-slate-900 shadow-lg shadow-amber-500/30 ring-2 ring-yellow-400/40 animate-pulse-glow'
                         : isMerge
                             ? 'bg-gradient-to-br from-purple-500 to-pink-500 text-white shadow-md shadow-purple-500/20 border border-purple-400/30'
                             : 'bg-gradient-to-br from-slate-600 to-slate-700 text-slate-200 border border-slate-500/40 shadow-md shadow-black/30 hover:border-indigo-500/50 hover:shadow-indigo-500/20'
                     }
-        `}
-            >
+        `}>
                 {(hash as string).slice(0, 4)}
 
                 {/* Merge indicator dot */}

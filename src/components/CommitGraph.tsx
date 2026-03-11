@@ -32,6 +32,11 @@ const EDGE_STYLES = {
         strokeWidth: 2,
         strokeDasharray: '6 3',
     },
+    orphaned: {
+        stroke: '#475569',
+        strokeWidth: 2,
+        strokeDasharray: '4 4',
+    },
 };
 
 // ─── Inner Graph Component (needs ReactFlowProvider) ────────────────────────
@@ -65,6 +70,21 @@ function CommitGraphInner() {
             tagTips[hash].push(tagName);
         });
 
+        // ── Calculate Reachability (for Orphans) ──
+        const reachableHashes = new Set<string>();
+        const queue: string[] = [HEAD];
+        Object.values(branches).forEach((h) => queue.push(h));
+        Object.values(useGitStore.getState().remoteBranches).forEach((h) => queue.push(h));
+        Object.values(tags).forEach((h) => queue.push(h));
+
+        while (queue.length > 0) {
+            const hash = queue.shift()!;
+            if (reachableHashes.has(hash)) continue;
+            reachableHashes.add(hash);
+            const commit = commits.find((c) => c.hash === hash);
+            if (commit) queue.push(...commit.parentHashes);
+        }
+
         // ── Create nodes ──
         const rawNodes: Node[] = commits.map((commit) => ({
             id: commit.hash,
@@ -78,6 +98,7 @@ function CommitGraphInner() {
                 tags: tagTips[commit.hash] || [],
                 timestamp: commit.timestamp,
                 isMerge: commit.parentHashes.length > 1,
+                isOrphaned: !reachableHashes.has(commit.hash),
             } satisfies CommitNodeData,
         }));
 
@@ -92,12 +113,12 @@ function CommitGraphInner() {
                     target: commit.hash,
                     type: 'smoothstep',
                     animated: commit.hash === HEAD, // Animate edges leading to HEAD
-                    style: isMergeEdge ? EDGE_STYLES.merge : EDGE_STYLES.normal,
+                    style: !reachableHashes.has(commit.hash) ? EDGE_STYLES.orphaned : (isMergeEdge ? EDGE_STYLES.merge : EDGE_STYLES.normal),
                     markerEnd: {
                         type: MarkerType.ArrowClosed,
                         width: 12,
                         height: 12,
-                        color: isMergeEdge ? '#c084fc' : '#6366f1',
+                        color: !reachableHashes.has(commit.hash) ? '#475569' : (isMergeEdge ? '#c084fc' : '#6366f1'),
                     },
                 });
             });

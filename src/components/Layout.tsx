@@ -78,7 +78,7 @@ export default function Layout() {
                         </h1>
                     </div>
                     <span className="text-[10px] text-slate-600 bg-slate-800/60 px-1.5 py-0.5 rounded font-mono">
-                        v6.0
+                        v7.0
                     </span>
                     {activeScenario && (
                         <span className="text-[9px] font-bold text-indigo-400 bg-indigo-500/15 border border-indigo-500/30 px-2 py-0.5 rounded-full">

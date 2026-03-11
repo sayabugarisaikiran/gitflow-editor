@@ -115,7 +115,7 @@ const Icons = {
 // ─── Main Component ─────────────────────────────────────────────────────────
 
 export default function NodeContextMenu({ menu, onClose }: NodeContextMenuProps) {
-    const { checkout, createBranchAt, merge, rebase, resetHead, deleteBranch, cherryPick, createTag, currentBranch } = useGitStore();
+    const { checkout, createBranchAt, merge, rebase, reset, revert, deleteBranch, cherryPick, createTag, currentBranch } = useGitStore();
 
     const handleCheckout = () => {
         if (menu.branches.length > 0) {
@@ -134,8 +134,8 @@ export default function NodeContextMenu({ menu, onClose }: NodeContextMenuProps)
         onClose();
     };
 
-    const handleResetHead = () => {
-        resetHead(menu.commitHash);
+    const handleReset = (mode: '--soft' | '--mixed' | '--hard') => {
+        reset(mode, menu.commitHash);
         onClose();
     };
 
@@ -210,9 +210,26 @@ export default function NodeContextMenu({ menu, onClose }: NodeContextMenuProps)
                     />
                     <MenuItem
                         icon={Icons.reset}
-                        label="Reset HEAD to here"
-                        onClick={handleResetHead}
+                        label="Reset HEAD (Soft)"
+                        onClick={() => handleReset('--soft')}
                         disabled={menu.isHead}
+                    />
+                    <MenuItem
+                        icon={Icons.reset}
+                        label="Reset HEAD (Mixed)"
+                        onClick={() => handleReset('--mixed')}
+                        disabled={menu.isHead}
+                    />
+                    <MenuItem
+                        icon={Icons.reset}
+                        label="Reset HEAD (Hard)"
+                        onClick={() => handleReset('--hard')}
+                        disabled={menu.isHead}
+                    />
+                    <MenuItem
+                        icon={Icons.cherryPick}
+                        label="Revert this commit"
+                        onClick={() => { revert(menu.commitHash); onClose(); }}
                     />
                     <MenuItem
                         icon={Icons.cherryPick}
