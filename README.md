@@ -30,6 +30,8 @@
 
 ## 📖 How to Use
 
+*(See our [Contribution Guide](CONTRIBUTING.md) for local setup, or read the [Git Engine Architecture Docs](docs/git-engine.md) to understand how it works under the hood).*
+
 GitFlow Editor is divided into three main interactive panes:
 
 ### 1. File Explorer (Left)
@@ -61,6 +63,22 @@ GitFlow Editor is divided into three main interactive panes:
 - **Graph Visualization**: [@xyflow/react (React Flow)](https://reactflow.dev/)
 - **State Management**: [Zustand](https://github.com/pmndrs/zustand)
 - **Styling**: [Tailwind CSS](https://tailwindcss.com/)
+
+### 🧠 Core Architecture (Phase 10+)
+
+The Git logic is entirely decoupled from the view layer using a **Command Pattern Engine**.
+
+```mermaid
+flowchart TD
+    A[User Action (e.g. click 'Commit')] --> B(useGitStore)
+    B --> C{CommandExecutor}
+    C -->|Instantiates| D[CommitCommand]
+    D -->|Executes pure logic| E[(GitStateData)]
+    E -->|Returns partial update| C
+    C -->|Updates store UI| B
+    B -->|Triggers re-render| F[React Flow Graph]
+```
+
 - **Persistence**: Zustand Persist (Local Storage)
 - **Animations**: [Framer Motion](https://www.framer.com/motion/)
 
