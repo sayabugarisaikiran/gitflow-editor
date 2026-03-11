@@ -113,6 +113,12 @@ function createTerminalLine(
     return { type, text, timestamp: Date.now() };
 }
 
+export function appendTerminalHistory(currentHistory: TerminalLine[], newLines: TerminalLine[]): TerminalLine[] {
+    const combined = [...currentHistory, ...newLines];
+    // Keep only the last 1000 lines to prevent React memory bloat
+    return combined.length > 1000 ? combined.slice(combined.length - 1000) : combined;
+}
+
 // ─── Initial state ──────────────────────────────────────────────────────────
 
 const initialCommitHash = generateHash();
@@ -194,31 +200,36 @@ export const useGitStore = create<GitState>((set, get) => ({
 
         if (state.conflictState && conflictedFiles.length > 0) {
             set({
-                terminalHistory: [
-                    ...state.terminalHistory,
+                terminalHistory: appendTerminalHistory(state.terminalHistory, [
                     createTerminalLine('command', `git commit -m "${message}"`),
                     createTerminalLine('error', 'error: Committing is not possible because you have unmerged files.'),
                     createTerminalLine('info', 'hint: Fix them up in the work tree, and then use \'git add/rm <file>\''),
                     createTerminalLine('info', 'hint: as appropriate to mark resolution and make a commit.'),
-                ],
+                ]),
             });
             return;
         }
 
         if (stagedFiles.length === 0) {
             set({
-                terminalHistory: [
-                    ...state.terminalHistory,
+                terminalHistory: appendTerminalHistory(state.terminalHistory, [
                     createTerminalLine('command', `git commit -m "${message}"`),
                     createTerminalLine('error', 'nothing to commit (no staged files)'),
-                ],
+                ]),
             });
             return;
         }
 
         const newHash = generateHash();
         const isMergeCommit = state.conflictState && state.mergingTarget;
-        const parentHashes = isMergeCommit ? [state.HEAD, state.branches[state.mergingTarget!]] : [state.HEAD];
+        
+        const secondParent = state.mergingTarget 
+            ? (state.branches[state.mergingTarget] || state.remoteBranches[state.mergingTarget]) 
+            : undefined;
+
+        const parentHashes = isMergeCommit && secondParent 
+            ? [state.HEAD, secondParent] 
+            : [state.HEAD];
 
         const newCommit: Commit = {
             hash: newHash,
@@ -229,30 +240,28 @@ export const useGitStore = create<GitState>((set, get) => ({
             filesChanged: stagedFiles.map(f => f.name),
         };
 
+        const isDetached = state.currentBranch === 'HEAD (detached)';
+
         set({
             commits: [...state.commits, newCommit],
             HEAD: newHash,
-            branches: {
-                ...state.branches,
-                [state.currentBranch]: newHash,
-            },
+            // Only update the branch pointer if we are actually on a branch!
+            branches: isDetached 
+                ? state.branches 
+                : { ...state.branches, [state.currentBranch]: newHash },
             conflictState: false,     // Reset conflict state on successful commit
             mergingTarget: null,      // Reset merge target
             files: state.files.map((f) =>
                 f.status === 'staged' ? { ...f, status: 'unmodified' as FileStatus } : f
             ),
-            terminalHistory: [
-                ...state.terminalHistory,
+            terminalHistory: appendTerminalHistory(state.terminalHistory, [
                 createTerminalLine('command', `git commit -m "${message}"`),
                 createTerminalLine(
                     'output',
-                    `[${state.currentBranch} ${newHash}] ${message}`
+                    isDetached ? `[detached HEAD ${newHash}] ${message}` : `[${state.currentBranch} ${newHash}] ${message}`
                 ),
-                createTerminalLine(
-                    'output',
-                    ` ${stagedFiles.length} file(s) changed`
-                ),
-            ],
+                createTerminalLine('output', `  ${stagedFiles.length} file(s) changed`),
+            ]),
         });
     },
 
@@ -1052,10 +1061,9 @@ export const useGitStore = create<GitState>((set, get) => ({
         const newHead = newCommits[newCommits.length - 1].hash;
 
         set({
+            // Simply append the new commits. Do not delete the old ones!
             commits: [
-                ...state.commits.filter(
-                    (c) => !branchCommits.some((bc) => bc.hash === c.hash)
-                ),
+                ...state.commits,
                 ...newCommits,
             ],
             HEAD: newHead,
@@ -1063,14 +1071,13 @@ export const useGitStore = create<GitState>((set, get) => ({
                 ...state.branches,
                 [state.currentBranch]: newHead,
             },
-            terminalHistory: [
-                ...state.terminalHistory,
+            terminalHistory: appendTerminalHistory(state.terminalHistory, [
                 createTerminalLine('command', `git rebase ${targetBranch}`),
                 createTerminalLine(
                     'output',
                     `Successfully rebased ${branchCommits.length} commit(s) onto '${targetBranch}'`
                 ),
-            ],
+            ]),
         });
     },
 

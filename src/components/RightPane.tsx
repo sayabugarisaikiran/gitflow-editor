@@ -16,7 +16,7 @@ const typePrefix: Record<string, string> = {
 };
 
 export default function RightPane() {
-    const { terminalHistory, commit, stageFile, checkout, createBranch, modifyFile, addFile } = useGitStore();
+    const { terminalHistory, commit, stageFile, checkout, createBranch } = useGitStore();
     const [input, setInput] = useState('');
     const scrollRef = useRef<HTMLDivElement>(null);
     const inputRef = useRef<HTMLInputElement>(null);

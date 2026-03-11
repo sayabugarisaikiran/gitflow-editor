@@ -1,5 +1,4 @@
 import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
 import { useGitStore } from './useGitStore';
 import { LESSONS, type Lesson, type Objective, type ObjectiveType } from '../data/lessons';
 

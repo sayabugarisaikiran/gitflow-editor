@@ -8,10 +8,6 @@ export default defineConfig({
   build: {
     // Minification
     minify: 'esbuild',
-    // Drop console/debugger in production
-    esbuildOptions: {
-      drop: ['console', 'debugger'],
-    },
     // Chunk splitting for large dependencies
     rollupOptions: {
       output: {
