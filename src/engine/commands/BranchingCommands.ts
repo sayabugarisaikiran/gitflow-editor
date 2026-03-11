@@ -140,8 +140,7 @@ export class DeleteBranchCommand implements GitCommand {
 
         const { [this.name]: _, ...remainingBranches } = state.branches;
         return {
-            branches: ...[remainingBranches], // Wait, this is a syntax error, let me fix it
-            // actually just `branches: remainingBranches`
+            branches: remainingBranches,
         };
     }
 }
