@@ -28,6 +28,32 @@
 - **Branch Comparison**: Side-by-side diff view of two different branches.
 - **Conflict Resolver**: Visual modal to resolve simulated merge conflicts.
 
+## 📖 How to Use
+
+GitFlow Editor is divided into three main interactive panes:
+
+### 1. File Explorer (Left)
+- **Modify Files**: Click the `~ modify` or `+ new` buttons at the bottom to simulate local changes.
+- **Stage Changes**: Click the `+ Stage` button next to a modified file or drag it into the **Staging Area** to prepare it for a commit.
+
+### 2. Commit Graph (Center)
+- **Select Commit**: Click any node to view its details in the **Commit Inspector**.
+- **Checkout**: Double-click a commit node or branch label to switch your `HEAD` to that position.
+- **Actions**: Right-click any node to open a context menu for advanced operations:
+    - **Merge/Rebase**: Integrate branches.
+    - **Reset**: Move a branch pointer back in time (`--soft`, `--mixed`, or `--hard`).
+    - **Cherry-pick / Revert**: Apply or undo specific commits.
+- **Navigation**: Use your mouse wheel to zoom and click-drag the canvas to pan.
+
+### 3. Integrated Terminal (Right)
+- **Commands**: Type standard Git commands (e.g., `git commit -m "feat: login"`) and press **Enter**.
+- **Shortcuts**: Use the quick-action buttons at the bottom for common commands like `git status`, `git log`, and `help`.
+
+### 🎓 Learning & Scenarios
+- **Lessons**: Click the **📚 Lessons** button in the header to start a guided challenge. Follow the objectives at the top of the screen.
+- **Scenarios**: Click **🎯 Scenarios** to load pre-built complex repository states for practice.
+- **Help**: Press **`?`** anywhere to view the full keyboard shortcuts and command reference.
+
 ## 🛠️ Tech Stack
 
 - **Framework**: [React 18](https://reactjs.org/) + [TypeScript](https://www.typescriptlang.org/)
