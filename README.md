@@ -70,10 +70,10 @@ The Git logic is entirely decoupled from the view layer using a **Command Patter
 
 ```mermaid
 flowchart TD
-    A[User Action (e.g. click 'Commit')] --> B(useGitStore)
+    A["User Action (e.g. click 'Commit')"] --> B(useGitStore)
     B --> C{CommandExecutor}
     C -->|Instantiates| D[CommitCommand]
-    D -->|Executes pure logic| E[(GitStateData)]
+    D -->|Executes pure logic| E[("GitStateData")]
     E -->|Returns partial update| C
     C -->|Updates store UI| B
     B -->|Triggers re-render| F[React Flow Graph]
