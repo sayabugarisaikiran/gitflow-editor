@@ -42,9 +42,9 @@ function DraggableFile({ fileName, status, onAction, actionLabel, actionColor }:
         transition-all duration-200 cursor-grab active:cursor-grabbing
         ${isDragging
                     ? 'opacity-30 scale-95'
-                    : 'hover:bg-slate-800/50 hover:shadow-md hover:shadow-black/20'
+                    : 'hover:bg-slate-100 dark:hover:bg-slate-800/50 hover:shadow-md hover:shadow-black/5 dark:hover:shadow-black/20'
                 }
-        border border-transparent hover:border-slate-700/30
+        border border-transparent hover:border-slate-300 dark:hover:border-slate-700/30
       `}
         >
             {/* File icon */}
@@ -56,7 +56,7 @@ function DraggableFile({ fileName, status, onAction, actionLabel, actionColor }:
             </div>
 
             {/* File name */}
-            <span className="text-xs text-slate-300 flex-1 truncate font-mono">
+            <span className="text-xs text-slate-700 dark:text-slate-300 flex-1 truncate font-mono">
                 {fileName}
             </span>
 
@@ -150,9 +150,13 @@ function DroppableZone({ id, children, label, color, count, isEmpty, emptyText, 
             )}
 
             {/* Content */}
-            <div className="space-y-0.5">
+            <div className={`
+          min-h-[60px] p-2 rounded-lg transition-colors
+          ${isEmpty ? 'bg-slate-100 dark:bg-[#0b0f19] border border-slate-300 dark:border-slate-800/50 border-dashed flex items-center justify-center' : ''}
+          ${isOver ? 'bg-transparent border-transparent' : ''}
+        `}>
                 {isEmpty && !isOver ? (
-                    <p className="text-xs text-slate-600 italic px-2 py-3 text-center">{emptyText}</p>
+                    <p className="text-xs text-slate-500 dark:text-slate-600 italic px-2 py-3 text-center">{emptyText}</p>
                 ) : (
                     children
                 )}
@@ -174,9 +178,9 @@ function CommitModal({ onClose, onCommit }: { onClose: () => void; onCommit: (ms
     };
 
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm" onClick={onClose}>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 dark:bg-black/60 backdrop-blur-sm" onClick={onClose}>
             <div
-                className="bg-[#151b28] border border-slate-700/50 rounded-xl shadow-2xl shadow-black/40 w-96 animate-slide-in"
+                className="bg-white dark:bg-[#151b28] border border-slate-200 dark:border-slate-700/50 rounded-xl shadow-2xl shadow-black/40 w-96 animate-slide-in"
                 onClick={(e) => e.stopPropagation()}
             >
                 {/* Header */}
@@ -275,20 +279,20 @@ export default function FileExplorer() {
     };
 
     return (
-        <div className="h-full flex flex-col bg-[#0d1117] border-r border-slate-800/60 overflow-hidden">
+        <div className="h-full flex flex-col bg-slate-50 dark:bg-[#0d1117] border-r border-slate-200 dark:border-slate-800/60 overflow-hidden transition-colors duration-300">
             {/* Header */}
-            <div className="px-4 py-3 border-b border-slate-800/60 bg-[#0d1117]/80 backdrop-blur-sm">
+            <div className="px-4 py-3 border-b border-slate-200 dark:border-slate-800/60 bg-white/90 dark:bg-[#0d1117]/80 backdrop-blur-sm transition-colors duration-300">
                 <div className="flex items-center gap-2">
                     <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-                    <span className="text-xs font-semibold uppercase tracking-wider text-slate-400">
+                    <span className="text-xs font-semibold uppercase tracking-wider text-slate-600 dark:text-slate-400">
                         File Explorer
                     </span>
                 </div>
                 <div className="mt-1 flex items-center gap-1.5">
-                    <svg className="w-3.5 h-3.5 text-indigo-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <svg className="w-3.5 h-3.5 text-indigo-500 dark:text-indigo-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                         <path strokeLinecap="round" strokeLinejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" />
                     </svg>
-                    <span className="text-sm font-medium text-indigo-300">{currentBranch}</span>
+                    <span className="text-sm font-medium text-indigo-700 dark:text-indigo-300">{currentBranch}</span>
                 </div>
             </div>
 

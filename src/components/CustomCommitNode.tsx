@@ -134,7 +134,7 @@ function CustomCommitNode({ data }: NodeProps) {
 
             {/* Commit message — below the node */}
             <div className="absolute -bottom-7 left-1/2 -translate-x-1/2 whitespace-nowrap max-w-[120px]">
-                <span className="text-[10px] text-slate-500 truncate block text-center group-hover:text-slate-300 transition-colors">
+                <span className="text-[10px] text-slate-600 dark:text-slate-500 truncate block text-center group-hover:text-slate-800 dark:group-hover:text-slate-300 transition-colors">
                     {message as string}
                 </span>
             </div>

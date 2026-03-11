@@ -3,6 +3,7 @@ import { Terminal } from '@xterm/xterm';
 import { FitAddon } from '@xterm/addon-fit';
 import '@xterm/xterm/css/xterm.css';
 import { useGitStore, type TerminalLine } from '../store/useGitStore';
+import { useSettingsStore } from '../store/useSettingsStore';
 
 // ─── ANSI color helpers ──────────────────────────────────────────────────────
 
@@ -351,6 +352,7 @@ export default function GitTerminal() {
     const historyRef = useRef<string[]>([]);
     const historyIndexRef = useRef(-1);
     const lastRenderedCountRef = useRef(0);
+    const { theme } = useSettingsStore();
 
     const prompt = useCallback(() => {
         xtermRef.current?.write(`\r\n${COLORS.green}${COLORS.bold}➜${COLORS.reset} `);
@@ -490,7 +492,20 @@ export default function GitTerminal() {
             resizeObserver.disconnect();
             term.dispose();
         };
-    }, [prompt]);
+    }, [prompt]); // We deliberately do not include 'theme' here to avoid re-mounting xterm
+
+    // Subscribe to theme changes to dynamically update xterm
+    useEffect(() => {
+        if (xtermRef.current) {
+            const isDark = theme === 'dark';
+            xtermRef.current.options.theme = {
+                background: isDark ? '#0a0e14' : '#f8fafc',
+                foreground: isDark ? '#e2e8f0' : '#475569', // slate-200 : slate-600
+                cursor: isDark ? '#818cf8' : '#6366f1', // indigo-400 : indigo-500
+                selectionBackground: isDark ? 'rgba(129, 140, 248, 0.3)' : 'rgba(99, 102, 241, 0.2)',
+            };
+        }
+    }, [theme]);
 
     // Subscribe to store changes — write new lines to terminal
     useEffect(() => {
@@ -527,25 +542,25 @@ export default function GitTerminal() {
     }, []);
 
     return (
-        <div className="h-full flex flex-col bg-[#0a0e14] border-l border-slate-800/60">
+        <div className="h-full flex flex-col bg-slate-50 dark:bg-[#0a0e14] border-l border-slate-200 dark:border-slate-800/60 transition-colors duration-300">
             {/* Header */}
-            <div className="px-4 py-3 border-b border-slate-800/60 bg-[#0d1117]/80 backdrop-blur-sm flex items-center gap-2">
+            <div className="px-4 py-3 border-b border-slate-200 dark:border-slate-800/60 bg-white/90 dark:bg-[#0d1117]/80 backdrop-blur-sm flex items-center gap-2 transition-colors duration-300">
                 <div className="flex gap-1.5">
-                    <div className="w-3 h-3 rounded-full bg-red-500/80" />
-                    <div className="w-3 h-3 rounded-full bg-yellow-500/80" />
-                    <div className="w-3 h-3 rounded-full bg-emerald-500/80" />
+                    <div className="w-3 h-3 rounded-full bg-red-400 dark:bg-red-500/80" />
+                    <div className="w-3 h-3 rounded-full bg-amber-400 dark:bg-yellow-500/80" />
+                    <div className="w-3 h-3 rounded-full bg-emerald-400 dark:bg-emerald-500/80" />
                 </div>
-                <span className="text-xs font-semibold uppercase tracking-wider text-slate-400 ml-2">
+                <span className="text-xs font-semibold uppercase tracking-wider text-slate-600 dark:text-slate-400 ml-2">
                     Terminal
                 </span>
-                <span className="ml-auto text-[10px] text-slate-600 font-mono">git-shell</span>
+                <span className="ml-auto text-[10px] text-slate-400 dark:text-slate-600 font-mono">git-shell</span>
             </div>
 
             {/* Xterm container */}
-            <div ref={termRef} className="flex-1 overflow-hidden px-1 py-1" />
+            <div ref={termRef} className="flex-1 overflow-hidden px-1 py-1 bg-slate-50 dark:bg-transparent" />
 
             {/* Quick commands */}
-            <div className="px-3 py-2 border-t border-slate-800/40 flex flex-wrap gap-1.5">
+            <div className="px-3 py-2 border-t border-slate-200 dark:border-slate-800/40 bg-white/50 dark:bg-transparent flex flex-wrap gap-1.5 transition-colors duration-300">
                 {['git status', 'git log', 'git branch', 'help', 'clear'].map((cmd) => (
                     <button
                         key={cmd}
@@ -565,7 +580,7 @@ export default function GitTerminal() {
                                 }
                             }
                         }}
-                        className="text-[10px] font-mono px-2 py-1 rounded bg-slate-800/60 text-slate-400 hover:text-indigo-300 hover:bg-slate-800 transition-colors border border-slate-700/40"
+                        className="text-[10px] font-mono px-2 py-1 rounded bg-slate-100 dark:bg-slate-800/60 text-slate-600 dark:text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-300 hover:bg-slate-200 dark:hover:bg-slate-800 transition-colors border border-slate-300 dark:border-slate-700/40"
                     >
                         {cmd}
                     </button>

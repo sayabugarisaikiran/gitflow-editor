@@ -15,6 +15,8 @@ import { useGitStore } from '../store/useGitStore';
 import { getLayoutedElements } from '../utils/layout-helper';
 import CustomCommitNode, { type CommitNodeData } from './CustomCommitNode';
 import NodeContextMenu, { type ContextMenuState } from './NodeContextMenu';
+import ExportButton from './ExportButton';
+import { useSettingsStore } from '../store/useSettingsStore';
 
 // ─── Node types registry ────────────────────────────────────────────────────
 
@@ -43,6 +45,7 @@ const EDGE_STYLES = {
 
 function CommitGraphInner() {
     const { commits, branches, tags, HEAD, currentBranch, checkout, selectCommit } = useGitStore();
+    const { theme } = useSettingsStore();
     const { fitView } = useReactFlow();
     const prevCommitCountRef = useRef(commits.length);
     const [contextMenu, setContextMenu] = useState<ContextMenuState | null>(null);
@@ -219,17 +222,17 @@ function CommitGraphInner() {
     }, []);
 
     return (
-        <div className="h-full flex flex-col bg-[#0f1623]">
+        <div className="h-full flex flex-col bg-slate-50 dark:bg-[#0f1623] transition-colors duration-300">
             {/* Header */}
-            <div className="px-4 py-3 border-b border-slate-800/60 bg-[#0d1117]/80 backdrop-blur-sm flex items-center justify-between shrink-0">
+            <div className="px-4 py-3 border-b border-slate-200 dark:border-slate-800/60 bg-white/90 dark:bg-[#0d1117]/80 backdrop-blur-sm flex items-center justify-between shrink-0 transition-colors duration-300">
                 <div className="flex items-center gap-2">
-                    <svg className="w-4 h-4 text-indigo-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <svg className="w-4 h-4 text-indigo-500 dark:text-indigo-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                         <path strokeLinecap="round" strokeLinejoin="round" d="M7.5 21L3 16.5m0 0L7.5 12M3 16.5h13.5m0-13.5L21 7.5m0 0L16.5 12M21 7.5H7.5" />
                     </svg>
-                    <span className="text-xs font-semibold uppercase tracking-wider text-slate-400">
+                    <span className="text-xs font-semibold uppercase tracking-wider text-slate-600 dark:text-slate-400">
                         Commit Graph
                     </span>
-                    <span className="text-[10px] bg-slate-800 text-slate-400 px-1.5 py-0.5 rounded ml-1">
+                    <span className="text-[10px] bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 px-1.5 py-0.5 rounded ml-1 transition-colors">
                         DAG
                     </span>
                 </div>
@@ -249,7 +252,7 @@ function CommitGraphInner() {
                             Merge
                         </span>
                     </div>
-                    <span className="text-[10px] text-slate-600">
+                    <span className="text-[10px] text-slate-500 dark:text-slate-600">
                         {commits.length} commit{commits.length !== 1 ? 's' : ''} • Right-click for options
                     </span>
                 </div>
@@ -282,14 +285,15 @@ function CommitGraphInner() {
                 >
                     <Background
                         variant={BackgroundVariant.Dots}
-                        color="#1e293b"
+                        color={theme === 'dark' ? '#1e293b' : '#cbd5e1'}
                         gap={20}
                         size={1}
                     />
                     <Controls
                         showInteractive={false}
-                        className="!bg-slate-800/80 !border-slate-700 !rounded-lg !shadow-xl"
+                        className={theme === 'dark' ? '!bg-slate-800/80 !border-slate-700 !rounded-lg !shadow-xl' : '!bg-white/90 !border-slate-200 !rounded-lg !shadow-sm'}
                     />
+                    <ExportButton />
                 </ReactFlow>
             </div>
 

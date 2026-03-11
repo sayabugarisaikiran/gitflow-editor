@@ -10,6 +10,7 @@ import KeyboardShortcuts, { useKeyboardShortcuts } from './KeyboardShortcuts';
 import { useGitStore } from '../store/useGitStore';
 import { useLessonStore } from '../store/useLessonStore';
 import { exportStateToURL } from '../hooks/useURLState';
+import { useSettingsStore } from '../store/useSettingsStore';
 
 export default function Layout() {
     const { resetState, terminalHistory, stashedFiles, selectCommit, activeScenario } = useGitStore();
@@ -19,6 +20,7 @@ export default function Layout() {
     const [showShortcuts, setShowShortcuts] = useState(false);
     const [showLessons, setShowLessons] = useState(false);
     const [shareCopied, setShareCopied] = useState(false);
+    const { theme, toggleTheme } = useSettingsStore();
 
     const handleShareURL = () => {
         const url = exportStateToURL();
@@ -52,7 +54,7 @@ export default function Layout() {
     });
 
     return (
-        <div className="h-screen w-screen flex flex-col bg-[#0a0e17] overflow-hidden">
+        <div className="h-screen w-screen flex flex-col bg-slate-50 dark:bg-[#0a0e17] text-slate-800 dark:text-slate-200 overflow-hidden transition-colors duration-300">
             {/* Onboarding */}
             <OnboardingOverlay />
 
@@ -65,19 +67,19 @@ export default function Layout() {
             {/* Lesson Panel */}
             <LessonPanel showPicker={showLessons} onClosePicker={() => setShowLessons(false)} />
 
-            {/* Top bar */}
-            <header className="flex items-center justify-between px-5 py-2.5 border-b border-slate-800/60 bg-[#0d1117]/90 backdrop-blur-sm shrink-0">
+            {/* ─── Header ─── */}
+            <header className="flex items-center justify-between px-5 py-2.5 border-b border-slate-200 dark:border-slate-800/60 bg-white/90 dark:bg-[#0d1117]/90 backdrop-blur-sm shrink-0 transition-colors duration-300">
                 <div className="flex items-center gap-3">
                     <div className="flex items-center gap-2">
-                        <svg className="w-5 h-5 text-indigo-400" viewBox="0 0 24 24" fill="currentColor">
+                        <svg className="w-5 h-5 text-indigo-500 dark:text-indigo-400" viewBox="0 0 24 24" fill="currentColor">
                             <path d="M21.035 5.257c0 1.02-.504 1.907-1.26 2.467a2.922 2.922 0 01-2.665 3.036l-.068.005v.462c0 .636-.264 1.21-.688 1.62a7.455 7.455 0 01-2.422 1.567c-.67.302-1.378.532-2.074.69v1.226a2.923 2.923 0 011.257 5.132 2.922 2.922 0 01-4.527-1.576 2.922 2.922 0 011.258-3.148L9.9 15.604l-.044-.005a10.91 10.91 0 01-2.074-.69 7.455 7.455 0 01-2.422-1.567 2.317 2.317 0 01-.687-1.62v-.462l-.068-.005a2.922 2.922 0 01-1.404-5.503A2.922 2.922 0 016.462 5.27V5c0-.278.226-.504.504-.504s.504.226.504.504v.783a2.922 2.922 0 01-1.465 5.056l-.068.005v.462c0 .37.155.724.424.976.571.54 1.308.96 2.099 1.261.629.24 1.29.413 1.921.514V7.744a2.922 2.922 0 01-1.258-5.133 2.922 2.922 0 014.527 1.576 2.922 2.922 0 01-1.258 3.149l.055 6.312c.63-.101 1.291-.274 1.92-.514.791-.301 1.528-.72 2.1-1.261.268-.252.423-.606.423-.976v-.462l-.068-.005a2.922 2.922 0 01-.26-5.568A2.922 2.922 0 0121.035 5.257z" />
                         </svg>
                         <h1 className="text-sm font-bold tracking-tight">
-                            <span className="text-slate-300">GitFlow</span>
-                            <span className="text-indigo-400">Editor</span>
+                            <span className="text-slate-900 dark:text-slate-300">GitFlow</span>
+                            <span className="text-indigo-600 dark:text-indigo-400">Editor</span>
                         </h1>
                     </div>
-                    <span className="text-[10px] text-slate-600 bg-slate-800/60 px-1.5 py-0.5 rounded font-mono">
+                    <span className="text-[10px] text-slate-500 dark:text-slate-600 bg-slate-100 dark:bg-slate-800/60 px-1.5 py-0.5 rounded font-mono">
                         v7.0
                     </span>
                     {activeScenario && (
@@ -105,8 +107,8 @@ export default function Layout() {
                     <button
                         onClick={() => setShowLessons(!showLessons)}
                         className={`text-[10px] font-mono px-2.5 py-1 rounded transition-colors border ${showLessons
-                            ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40'
-                            : 'bg-slate-800/50 text-slate-400 hover:text-emerald-300 hover:bg-slate-800 border-slate-700/40'
+                            ? 'bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 border-emerald-500/40'
+                            : 'bg-slate-100 dark:bg-slate-800/50 text-slate-500 dark:text-slate-400 hover:text-emerald-600 dark:hover:text-emerald-300 hover:bg-slate-200 dark:hover:bg-slate-800 border-slate-300 dark:border-slate-700/40'
                             }`}
                         title="Open guided lessons"
                     >
@@ -115,8 +117,8 @@ export default function Layout() {
                     <button
                         onClick={() => setShowScenarios(!showScenarios)}
                         className={`text-[10px] font-mono px-2.5 py-1 rounded transition-colors border ${showScenarios
-                            ? 'bg-indigo-500/20 text-indigo-300 border-indigo-500/40'
-                            : 'bg-slate-800/50 text-slate-400 hover:text-indigo-300 hover:bg-slate-800 border-slate-700/40'
+                            ? 'bg-indigo-500/20 text-indigo-700 dark:text-indigo-300 border-indigo-500/40'
+                            : 'bg-slate-100 dark:bg-slate-800/50 text-slate-500 dark:text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-300 hover:bg-slate-200 dark:hover:bg-slate-800 border-slate-300 dark:border-slate-700/40'
                             }`}
                         title="Toggle scenarios"
                     >
@@ -124,7 +126,7 @@ export default function Layout() {
                     </button>
                     <button
                         onClick={handleShareURL}
-                        className="text-[10px] font-mono px-2.5 py-1 rounded bg-slate-800/50 text-slate-400 hover:text-cyan-300 hover:bg-slate-800 transition-colors border border-slate-700/40"
+                        className="text-[10px] font-mono px-2.5 py-1 rounded bg-slate-100 dark:bg-slate-800/50 text-slate-500 dark:text-slate-400 hover:text-cyan-600 dark:hover:text-cyan-300 hover:bg-slate-200 dark:hover:bg-slate-800 transition-colors border border-slate-300 dark:border-slate-700/40"
                         title="Copy shareable URL to clipboard"
                     >
                         {shareCopied ? '✓ Link Copied!' : '🔗 Share'}
@@ -137,8 +139,15 @@ export default function Layout() {
                         {copied ? '✓ Copied!' : '📋 Export'}
                     </button>
                     <button
+                        onClick={toggleTheme}
+                        className="text-[10px] font-mono px-2.5 py-1 rounded bg-slate-100 dark:bg-slate-800/50 text-slate-600 dark:text-slate-400 hover:text-amber-600 dark:hover:text-amber-300 hover:bg-slate-200 dark:hover:bg-slate-800 transition-colors border border-slate-300 dark:border-slate-700/40 ml-2"
+                        title="Toggle Light/Dark Theme"
+                    >
+                        {theme === 'dark' ? '☀️ Light' : '🌙 Dark'}
+                    </button>
+                    <button
                         onClick={resetState}
-                        className="text-[10px] font-mono px-2.5 py-1 rounded bg-slate-800/50 text-slate-400 hover:text-red-300 hover:bg-slate-800 transition-colors border border-slate-700/40"
+                        className="text-[10px] font-mono px-2.5 py-1 rounded bg-red-50 dark:bg-slate-800/50 text-red-600 dark:text-slate-400 hover:text-red-700 dark:hover:text-red-300 hover:bg-red-100 dark:hover:bg-slate-800 transition-colors border border-red-200 dark:border-slate-700/40 ml-2"
                         title="Reset everything"
                     >
                         ↺ reset
