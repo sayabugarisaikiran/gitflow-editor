@@ -5,14 +5,28 @@ import GitTerminal from './GitTerminal';
 import CommitInspector from './CommitInspector';
 import OnboardingOverlay from './OnboardingOverlay';
 import ScenarioPanel from './ScenarioPanel';
+import LessonPanel from './LessonPanel';
 import KeyboardShortcuts, { useKeyboardShortcuts } from './KeyboardShortcuts';
 import { useGitStore } from '../store/useGitStore';
+import { useLessonStore } from '../store/useLessonStore';
+import { exportStateToURL } from '../hooks/useURLState';
 
 export default function Layout() {
     const { resetState, terminalHistory, stashedFiles, selectCommit, activeScenario } = useGitStore();
+    const { currentLessonId } = useLessonStore();
     const [copied, setCopied] = useState(false);
     const [showScenarios, setShowScenarios] = useState(false);
     const [showShortcuts, setShowShortcuts] = useState(false);
+    const [showLessons, setShowLessons] = useState(false);
+    const [shareCopied, setShareCopied] = useState(false);
+
+    const handleShareURL = () => {
+        const url = exportStateToURL();
+        navigator.clipboard.writeText(url).then(() => {
+            setShareCopied(true);
+            setTimeout(() => setShareCopied(false), 2000);
+        });
+    };
 
     const handleExportCommands = () => {
         const commands = terminalHistory
@@ -48,6 +62,9 @@ export default function Layout() {
             {/* Scenario Panel */}
             {showScenarios && <ScenarioPanel onClose={() => setShowScenarios(false)} />}
 
+            {/* Lesson Panel */}
+            <LessonPanel showPicker={showLessons} onClosePicker={() => setShowLessons(false)} />
+
             {/* Top bar */}
             <header className="flex items-center justify-between px-5 py-2.5 border-b border-slate-800/60 bg-[#0d1117]/90 backdrop-blur-sm shrink-0">
                 <div className="flex items-center gap-3">
@@ -73,6 +90,11 @@ export default function Layout() {
                             📦 {stashedFiles.length} stashed
                         </span>
                     )}
+                    {currentLessonId && (
+                        <span className="text-[9px] font-bold text-emerald-400 bg-emerald-500/15 border border-emerald-500/30 px-2 py-0.5 rounded-full animate-pulse">
+                            📚 Lesson Active
+                        </span>
+                    )}
                 </div>
 
                 {/* Actions */}
@@ -80,6 +102,16 @@ export default function Layout() {
                     <span className="text-[10px] text-slate-500 hidden xl:block">
                         Click • Double-click • Right-click  |  Press <kbd className="text-[9px] font-mono text-slate-400 bg-slate-800 border border-slate-700/60 rounded px-1">?</kbd> for shortcuts
                     </span>
+                    <button
+                        onClick={() => setShowLessons(!showLessons)}
+                        className={`text-[10px] font-mono px-2.5 py-1 rounded transition-colors border ${showLessons
+                            ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40'
+                            : 'bg-slate-800/50 text-slate-400 hover:text-emerald-300 hover:bg-slate-800 border-slate-700/40'
+                            }`}
+                        title="Open guided lessons"
+                    >
+                        📚 Lessons
+                    </button>
                     <button
                         onClick={() => setShowScenarios(!showScenarios)}
                         className={`text-[10px] font-mono px-2.5 py-1 rounded transition-colors border ${showScenarios
@@ -89,6 +121,13 @@ export default function Layout() {
                         title="Toggle scenarios"
                     >
                         🎯 Scenarios
+                    </button>
+                    <button
+                        onClick={handleShareURL}
+                        className="text-[10px] font-mono px-2.5 py-1 rounded bg-slate-800/50 text-slate-400 hover:text-cyan-300 hover:bg-slate-800 transition-colors border border-slate-700/40"
+                        title="Copy shareable URL to clipboard"
+                    >
+                        {shareCopied ? '✓ Link Copied!' : '🔗 Share'}
                     </button>
                     <button
                         onClick={handleExportCommands}
