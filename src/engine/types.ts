@@ -49,6 +49,8 @@ export interface GitStateData {
 
     // Bisect State
     bisectState: BisectState | null;
+
+    isFetchingGithub: boolean;
 }
 
 // Full store state including actions (used by Zustand)
@@ -77,6 +79,7 @@ export interface GitState extends GitStateData {
     modifyFile: (fileName: string) => void;
     addFile: (fileName: string) => void;
     loadScenario: (scenario: ScenarioState) => void;
+    loadGithubRepo: (owner: string, repo: string) => Promise<void>;
     resetState: () => void;
     bisectStart: (goodHash: string, badHash: string) => void;
     bisectMark: (hash: string, verdict: 'good' | 'bad') => void;

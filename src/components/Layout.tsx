@@ -109,6 +109,40 @@ export default function Layout() {
                             📚 Lesson Active
                         </span>
                     )}
+
+                    {/* GitHub Integration */}
+                    <div className="flex items-center ml-2 border border-slate-300 dark:border-slate-700/60 rounded overflow-hidden">
+                        <input
+                            type="text"
+                            placeholder="owner/repo (e.g. facebook/react)"
+                            className="text-[10px] w-48 px-2 py-1 bg-white dark:bg-[#0a0e17] text-slate-800 dark:text-slate-200 outline-none placeholder:text-slate-400 dark:placeholder:text-slate-500"
+                            onKeyDown={(e) => {
+                                if (e.key === 'Enter') {
+                                    const val = e.currentTarget.value.trim();
+                                    if (val.includes('/')) {
+                                        const [owner, repo] = val.split('/');
+                                        useGitStore.getState().loadGithubRepo(owner, repo);
+                                        e.currentTarget.value = '';
+                                    }
+                                }
+                            }}
+                        />
+                        <button
+                            disabled={useGitStore.getState().isFetchingGithub}
+                            className="text-[10px] font-mono px-2 py-1 bg-slate-100 dark:bg-slate-800/80 text-slate-600 dark:text-slate-300 border-l border-slate-300 dark:border-slate-700/60 hover:bg-slate-200 dark:hover:bg-slate-700 disabled:opacity-50"
+                            onClick={(e) => {
+                                const input = e.currentTarget.previousElementSibling as HTMLInputElement;
+                                const val = input.value.trim();
+                                if (val.includes('/')) {
+                                    const [owner, repo] = val.split('/');
+                                    useGitStore.getState().loadGithubRepo(owner, repo);
+                                    input.value = '';
+                                }
+                            }}
+                        >
+                            {useGitStore.getState().isFetchingGithub ? '⏳' : 'Fetch'}
+                        </button>
+                    </div>
                 </div>
 
                 {/* Actions */}

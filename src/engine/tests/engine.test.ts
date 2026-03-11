@@ -41,6 +41,7 @@ describe('Git Engine', () => {
             conflictState: false,
             mergingTarget: null,
             bisectState: null,
+            isFetchingGithub: false,
         };
     });
 

@@ -69,6 +69,7 @@ const initialState: GitStateData = {
     conflictState: false,
     mergingTarget: null,
     bisectState: null,
+    isFetchingGithub: false,
 };
 
 export const useGitStore = create<GitState>((set, get) => {
@@ -91,6 +92,7 @@ export const useGitStore = create<GitState>((set, get) => {
             conflictState: currentState.conflictState,
             mergingTarget: currentState.mergingTarget,
             bisectState: currentState.bisectState,
+            isFetchingGithub: currentState.isFetchingGithub,
         };
         const update = engineExecutor.execute(command, stateData);
         set(update);
@@ -122,6 +124,39 @@ export const useGitStore = create<GitState>((set, get) => {
         createTag: (name, hash) => runCommand(new CreateTagCommand(name, hash)),
         deleteTag: (name) => runCommand(new DeleteTagCommand(name)),
         loadScenario: (scenario) => runCommand(new LoadScenarioCommand(scenario)),
+        
+        loadGithubRepo: async (owner: string, repo: string) => {
+            set({ isFetchingGithub: true });
+            try {
+                const { fetchRepoCommits } = await import('../services/githubService.js');
+                const scenario = await fetchRepoCommits(owner, repo);
+                const currentState = get();
+                const stateData: GitStateData = {
+                    commits: currentState.commits,
+                    branches: currentState.branches,
+                    tags: currentState.tags,
+                    remoteBranches: currentState.remoteBranches,
+                    simulatedRemote: currentState.simulatedRemote,
+                    HEAD: currentState.HEAD,
+                    currentBranch: currentState.currentBranch,
+                    files: currentState.files,
+                    terminalHistory: currentState.terminalHistory,
+                    stashedFiles: currentState.stashedFiles,
+                    selectedCommit: currentState.selectedCommit,
+                    activeScenario: currentState.activeScenario,
+                    conflictState: currentState.conflictState,
+                    mergingTarget: currentState.mergingTarget,
+                    bisectState: currentState.bisectState,
+                    isFetchingGithub: currentState.isFetchingGithub,
+                };
+                const update = engineExecutor.execute(new LoadScenarioCommand(scenario), stateData);
+                set({ ...update, isFetchingGithub: false });
+            } catch (error: any) {
+                set({ isFetchingGithub: false });
+                alert(error.message);
+            }
+        },
+
         resetState: () => runCommand(new ResetStateCommand()),
         bisectStart: (good, bad) => runCommand(new BisectStartCommand(good, bad)),
         bisectMark: (hash, verdict) => runCommand(new BisectMarkCommand(hash, verdict)),
@@ -146,6 +181,7 @@ export const useGitStore = create<GitState>((set, get) => {
                 conflictState: currentState.conflictState,
                 mergingTarget: currentState.mergingTarget,
                 bisectState: currentState.bisectState,
+                isFetchingGithub: currentState.isFetchingGithub,
             };
             const update = engineExecutor.undo(stateData);
             if (update) set(update);
@@ -168,6 +204,7 @@ export const useGitStore = create<GitState>((set, get) => {
                 conflictState: currentState.conflictState,
                 mergingTarget: currentState.mergingTarget,
                 bisectState: currentState.bisectState,
+                isFetchingGithub: currentState.isFetchingGithub,
             };
             const update = engineExecutor.redo(stateData);
             if (update) set(update);
