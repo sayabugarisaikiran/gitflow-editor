@@ -24,6 +24,14 @@ export interface TerminalLine {
     timestamp: number;
 }
 
+export interface BisectState {
+    goodHash: string;
+    badHash: string;
+    tested: Record<string, 'good' | 'bad'>;
+    currentTest: string | null;
+    foundHash: string | null;
+}
+
 export interface GitState {
     // Repository state
     commits: Commit[];
@@ -42,6 +50,9 @@ export interface GitState {
     // Merge Conflict State
     conflictState: boolean;
     mergingTarget: string | null;
+
+    // Bisect State
+    bisectState: BisectState | null;
 
     // Actions
     fetch: () => void;
@@ -69,6 +80,9 @@ export interface GitState {
     addFile: (fileName: string) => void;
     loadScenario: (scenario: ScenarioState) => void;
     resetState: () => void;
+    bisectStart: (goodHash: string, badHash: string) => void;
+    bisectMark: (hash: string, verdict: 'good' | 'bad') => void;
+    bisectReset: () => void;
 }
 
 // ─── Scenario Types ──────────────────────────────────────────────────────────
@@ -135,6 +149,7 @@ const initialState = {
     activeScenario: null as string | null,
     conflictState: false,
     mergingTarget: null as string | null,
+    bisectState: null as BisectState | null,
 };
 
 // ─── Store ───────────────────────────────────────────────────────────────────
@@ -1167,6 +1182,112 @@ export const useGitStore = create<GitState>((set, get) => ({
             activeScenario: null,
             conflictState: false,
             mergingTarget: null,
+            bisectState: null,
+        });
+    },
+
+    bisectStart: (goodHash: string, badHash: string) => {
+        const { commits } = get();
+
+        // Build ancestor chain from badHash (oldest to newest along the path)
+        function getAncestors(hash: string): string[] {
+            const visited = new Set<string>();
+            const order: string[] = [];
+            const stack = [hash];
+            while (stack.length) {
+                const h = stack.pop()!;
+                if (visited.has(h)) continue;
+                visited.add(h);
+                order.push(h);
+                const commit = commits.find((c) => c.hash === h);
+                if (commit) commit.parentHashes.forEach((p) => stack.push(p));
+            }
+            return order.reverse();
+        }
+
+        const ancestors = getAncestors(badHash);
+        const between = ancestors.filter((h) => h !== goodHash && h !== badHash);
+        const midIdx = Math.floor(between.length / 2);
+        const currentTest = between[midIdx] ?? badHash;
+
+        set({
+            bisectState: {
+                goodHash,
+                badHash,
+                tested: { [goodHash]: 'good', [badHash]: 'bad' },
+                currentTest,
+                foundHash: between.length === 0 ? badHash : null,
+            },
+            terminalHistory: [
+                ...get().terminalHistory,
+                createTerminalLine('command', `git bisect start`),
+                createTerminalLine('output', `Bisecting: ${between.length} commits left to test`),
+                createTerminalLine('info', `Testing commit: ${currentTest.slice(0, 7)}`),
+            ],
+        });
+    },
+
+    bisectMark: (hash: string, verdict: 'good' | 'bad') => {
+        const { bisectState, commits } = get();
+        if (!bisectState) return;
+
+        const newTested = { ...bisectState.tested, [hash]: verdict };
+
+        // Find the latest 'good' and earliest 'bad'
+        const latestGood = verdict === 'good' ? hash : bisectState.goodHash;
+        const earliestBad = verdict === 'bad' ? hash : bisectState.badHash;
+
+        // Get commits topologically between latestGood and earliestBad
+        function getAncestors(startHash: string): string[] {
+            const visited = new Set<string>();
+            const order: string[] = [];
+            const stack = [startHash];
+            while (stack.length) {
+                const h = stack.pop()!;
+                if (visited.has(h)) continue;
+                visited.add(h);
+                order.push(h);
+                const commit = commits.find((c) => c.hash === h);
+                if (commit) commit.parentHashes.forEach((p) => stack.push(p));
+            }
+            return order.reverse();
+        }
+
+        const ancestors = getAncestors(earliestBad);
+        const untested = ancestors.filter(
+            (h) => !newTested[h] && h !== latestGood && h !== earliestBad
+        );
+
+        const isFound = untested.length === 0;
+        const midIdx = Math.floor(untested.length / 2);
+        const nextTest = isFound ? null : untested[midIdx];
+
+        set({
+            bisectState: {
+                goodHash: latestGood,
+                badHash: earliestBad,
+                tested: newTested,
+                currentTest: nextTest,
+                foundHash: isFound ? earliestBad : null,
+            },
+            terminalHistory: [
+                ...get().terminalHistory,
+                createTerminalLine('command', `git bisect ${verdict} ${hash.slice(0, 7)}`),
+                isFound
+                    ? createTerminalLine('info', `🎯 Found! First bad commit: ${earliestBad.slice(0, 7)}`)
+                    : createTerminalLine('output', `${untested.length} commits left — testing: ${nextTest?.slice(0, 7) ?? '?'}`),
+            ],
+        });
+    },
+
+    bisectReset: () => {
+        set({
+            bisectState: null,
+            terminalHistory: [
+                ...get().terminalHistory,
+                createTerminalLine('command', 'git bisect reset'),
+                createTerminalLine('output', 'We are back to the original HEAD.'),
+            ],
         });
     },
 }));

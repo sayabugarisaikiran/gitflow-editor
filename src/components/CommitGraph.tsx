@@ -16,6 +16,8 @@ import { getLayoutedElements } from '../utils/layout-helper';
 import CustomCommitNode, { type CommitNodeData } from './CustomCommitNode';
 import NodeContextMenu, { type ContextMenuState } from './NodeContextMenu';
 import ExportButton from './ExportButton';
+import BisectPanel from './BisectPanel';
+import InteractiveRebaseModal from './InteractiveRebaseModal';
 import { useSettingsStore } from '../store/useSettingsStore';
 
 // ─── Node types registry ────────────────────────────────────────────────────
@@ -44,11 +46,12 @@ const EDGE_STYLES = {
 // ─── Inner Graph Component (needs ReactFlowProvider) ────────────────────────
 
 function CommitGraphInner() {
-    const { commits, branches, tags, HEAD, currentBranch, checkout, selectCommit } = useGitStore();
+    const { commits, branches, tags, HEAD, currentBranch, checkout, selectCommit, bisectState } = useGitStore();
     const { theme } = useSettingsStore();
     const { fitView } = useReactFlow();
     const prevCommitCountRef = useRef(commits.length);
     const [contextMenu, setContextMenu] = useState<ContextMenuState | null>(null);
+    const [interactiveRebaseTarget, setInteractiveRebaseTarget] = useState<string | null>(null);
 
     // Build React Flow nodes + edges from Zustand state
     const { nodes, edges } = useMemo(() => {
@@ -302,6 +305,17 @@ function CommitGraphInner() {
                 <NodeContextMenu
                     menu={contextMenu}
                     onClose={() => setContextMenu(null)}
+                />
+            )}
+
+            {/* Bisect Panel */}
+            {bisectState && <BisectPanel bisectState={bisectState} />}
+
+            {/* Interactive Rebase Modal */}
+            {interactiveRebaseTarget && (
+                <InteractiveRebaseModal
+                    targetBranch={interactiveRebaseTarget}
+                    onClose={() => setInteractiveRebaseTarget(null)}
                 />
             )}
         </div>

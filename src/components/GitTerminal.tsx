@@ -245,6 +245,42 @@ function parseCommand(input: string): void {
             }
             break;
 
+        case 'bisect': {
+            const sub = parts[2];
+            if (sub === 'start') {
+                const { commits: allCommits, HEAD: currentHEAD, currentBranch: curBranch, branches: allBranches } = store;
+                const sorted = [...allCommits].sort((a, b) => a.timestamp - b.timestamp);
+                const goodHash = sorted[0]?.hash;
+                const badHash = currentHEAD ?? allBranches[curBranch];
+                if (goodHash && badHash && goodHash !== badHash) {
+                    store.bisectStart(goodHash, badHash);
+                } else {
+                    useGitStore.setState((state) => ({
+                        terminalHistory: [
+                            ...state.terminalHistory,
+                            { type: 'command', text: trimmed, timestamp: Date.now() },
+                            { type: 'error', text: 'Need at least 2 commits to bisect', timestamp: Date.now() },
+                        ],
+                    }));
+                }
+            } else if (sub === 'good' && parts[3]) {
+                store.bisectMark(parts[3], 'good');
+            } else if (sub === 'bad' && parts[3]) {
+                store.bisectMark(parts[3], 'bad');
+            } else if (sub === 'reset') {
+                store.bisectReset();
+            } else {
+                useGitStore.setState((state) => ({
+                    terminalHistory: [
+                        ...state.terminalHistory,
+                        { type: 'command', text: trimmed, timestamp: Date.now() },
+                        { type: 'info', text: 'usage: git bisect start | git bisect good <hash> | git bisect bad <hash> | git bisect reset', timestamp: Date.now() },
+                    ],
+                }));
+            }
+            break;
+        }
+
         case 'tag':
             if (parts[2] === '-d' && parts[3]) {
                 store.deleteTag(parts[3]);

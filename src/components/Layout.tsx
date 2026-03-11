@@ -3,24 +3,31 @@ import FileExplorer from './FileExplorer';
 import CommitGraph from './CommitGraph';
 import GitTerminal from './GitTerminal';
 import CommitInspector from './CommitInspector';
-import OnboardingOverlay from './OnboardingOverlay';
+import OnboardingTour from './OnboardingTour';
 import ScenarioPanel from './ScenarioPanel';
 import LessonPanel from './LessonPanel';
-import KeyboardShortcuts, { useKeyboardShortcuts } from './KeyboardShortcuts';
+import KeyboardShortcutsModal from './KeyboardShortcutsModal';
+import { useKeyboardShortcuts } from './KeyboardShortcuts';
 import { useGitStore } from '../store/useGitStore';
 import { useLessonStore } from '../store/useLessonStore';
 import { exportStateToURL } from '../hooks/useURLState';
 import { useSettingsStore } from '../store/useSettingsStore';
 
 export default function Layout() {
-    const { resetState, terminalHistory, stashedFiles, selectCommit, activeScenario } = useGitStore();
+    const { resetState, terminalHistory, stashedFiles, selectCommit, activeScenario, bisectState } = useGitStore();
     const { currentLessonId } = useLessonStore();
     const [copied, setCopied] = useState(false);
     const [showScenarios, setShowScenarios] = useState(false);
     const [showShortcuts, setShowShortcuts] = useState(false);
     const [showLessons, setShowLessons] = useState(false);
+    const [showOnboarding, setShowOnboarding] = useState(false);
     const [shareCopied, setShareCopied] = useState(false);
-    const { theme, toggleTheme } = useSettingsStore();
+    const { theme, toggleTheme, hasSeenOnboarding } = useSettingsStore();
+
+    // Show onboarding automatically on first visit
+    useState(() => {
+        if (!hasSeenOnboarding) setShowOnboarding(true);
+    });
 
     const handleShareURL = () => {
         const url = exportStateToURL();
@@ -55,11 +62,11 @@ export default function Layout() {
 
     return (
         <div className="h-screen w-screen flex flex-col bg-slate-50 dark:bg-[#0a0e17] text-slate-800 dark:text-slate-200 overflow-hidden transition-colors duration-300">
-            {/* Onboarding */}
-            <OnboardingOverlay />
+            {/* Onboarding Tour */}
+            {showOnboarding && <OnboardingTour onComplete={() => setShowOnboarding(false)} />}
 
             {/* Keyboard Shortcuts */}
-            {showShortcuts && <KeyboardShortcuts onClose={() => setShowShortcuts(false)} />}
+            {showShortcuts && <KeyboardShortcutsModal onClose={() => setShowShortcuts(false)} />}
 
             {/* Scenario Panel */}
             {showScenarios && <ScenarioPanel onClose={() => setShowScenarios(false)} />}
@@ -80,7 +87,7 @@ export default function Layout() {
                         </h1>
                     </div>
                     <span className="text-[10px] text-slate-500 dark:text-slate-600 bg-slate-100 dark:bg-slate-800/60 px-1.5 py-0.5 rounded font-mono">
-                        v7.0
+                        v9.0
                     </span>
                     {activeScenario && (
                         <span className="text-[9px] font-bold text-indigo-400 bg-indigo-500/15 border border-indigo-500/30 px-2 py-0.5 rounded-full">
@@ -90,6 +97,11 @@ export default function Layout() {
                     {stashedFiles.length > 0 && (
                         <span className="text-[9px] font-bold text-amber-400 bg-amber-500/15 border border-amber-500/30 px-2 py-0.5 rounded-full animate-pulse">
                             📦 {stashedFiles.length} stashed
+                        </span>
+                    )}
+                    {bisectState && (
+                        <span className="text-[9px] font-bold text-amber-400 bg-amber-500/15 border border-amber-500/30 px-2 py-0.5 rounded-full animate-pulse">
+                            🔍 Bisecting
                         </span>
                     )}
                     {currentLessonId && (
