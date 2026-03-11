@@ -75,4 +75,39 @@ describe('Git Engine', () => {
         // Verify file is unmodified after commit
         expect(state.files[0].status).toBe('unmodified');
     });
+
+    it('can time travel backwards and forwards (undo/redo)', () => {
+        // Initial state -> Add file -> Stage file -> Commit
+        let update = executor.execute(new AddFileCommand('index.js'), state);
+        state = { ...state, ...update };
+        update = executor.execute(new StageFileCommand('index.js'), state);
+        state = { ...state, ...update };
+        
+        expect(state.files[0].status).toBe('staged');
+        expect(executor.canUndo()).toBe(true);
+
+        // Undo staging (should go back to modified)
+        update = executor.undo(state) as Partial<GitStateData>;
+        state = { ...state, ...update };
+        expect(state.files[0].status).toBe('modified');
+        expect(executor.canRedo()).toBe(true);
+
+        // Undo adding file (should disappear)
+        update = executor.undo(state) as Partial<GitStateData>;
+        state = { ...state, ...update };
+        expect(state.files.length).toBe(0);
+
+        // Redo adding file (should reappear)
+        update = executor.redo(state) as Partial<GitStateData>;
+        state = { ...state, ...update };
+        expect(state.files[0].status).toBe('modified');
+
+        // Redo staging (should be staged again)
+        update = executor.redo(state) as Partial<GitStateData>;
+        state = { ...state, ...update };
+        expect(state.files[0].status).toBe('staged');
+        
+        // No more redos left
+        expect(executor.canRedo()).toBe(false);
+    });
 });

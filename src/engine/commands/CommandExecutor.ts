@@ -2,43 +2,69 @@ import { GitCommand } from './Command.js';
 import { GitStateData } from '../types.js';
 
 export class CommandExecutor {
-    private history: GitCommand[] = [];
-    private undoStack: GitCommand[] = [];
+    private history: { commandName: string; snapshot: GitStateData }[] = [];
+    private future: { commandName: string; snapshot: GitStateData }[] = [];
 
     /**
      * Executes a command and returns the partial state update.
-     * Records the command in history for potential undo.
+     * Records a deep clone of the current state before execution for time-travel.
      */
     execute(command: GitCommand, currentState: GitStateData): Partial<GitStateData> {
+        // Deep clone primitive dictionaries and arrays using built-in structuredClone
+        const snapshot = structuredClone(currentState);
+        
         const update = command.execute({ state: currentState });
         
-        // If the command actually mutates state (has an update) and supports undo natively, 
-        // we keep it. Alternatively, to support generic time-travel, we could snapshot 
-        // the state before execution. We'll store the command itself for now.
-        this.history.push(command);
-        // Clear redo stack on new action
-        this.undoStack = [];
+        // Push the snapshot of the state perfectly preserved *prior* to this command executing
+        this.history.push({ 
+            commandName: command.constructor.name, 
+            snapshot 
+        });
+        
+        // Clear redo stack on any new timeline branch
+        this.future = [];
         
         return update;
     }
 
     /**
-     * Reverts the last command. Requires the command to implement `undo()`.
-     * Returns the partial state update to apply the undo, or null if nothing to undo.
+     * Reverts the last command by popping the previous state snapshot.
      */
     undo(currentState: GitStateData): Partial<GitStateData> | null {
-        const command = this.history.pop();
-        if (!command) return null;
+        const previousRecord = this.history.pop();
+        if (!previousRecord) return null;
 
-        if (command.undo) {
-            const update = command.undo({ state: currentState });
-            this.undoStack.push(command);
-            return update;
-        }
+        // Save current state to the future (redo) stack before we travel back
+        this.future.push({
+            commandName: 'undo',
+            snapshot: structuredClone(currentState)
+        });
 
-        // If command doesn't support undo, put it back and return null
-        this.history.push(command);
-        console.warn('Command does not support undo');
-        return null;
+        // The snapshot IS the full state replacing the current one
+        return previousRecord.snapshot;
+    }
+
+    /**
+     * Travels forward in time if an undo was just performed.
+     */
+    redo(currentState: GitStateData): Partial<GitStateData> | null {
+        const nextRecord = this.future.pop();
+        if (!nextRecord) return null;
+
+        // Save current state back into history before moving forward
+        this.history.push({
+            commandName: 'redo',
+            snapshot: structuredClone(currentState)
+        });
+
+        return nextRecord.snapshot;
+    }
+
+    canUndo(): boolean {
+        return this.history.length > 0;
+    }
+
+    canRedo(): boolean {
+        return this.future.length > 0;
     }
 }

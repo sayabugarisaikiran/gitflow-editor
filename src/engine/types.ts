@@ -81,6 +81,12 @@ export interface GitState extends GitStateData {
     bisectStart: (goodHash: string, badHash: string) => void;
     bisectMark: (hash: string, verdict: 'good' | 'bad') => void;
     bisectReset: () => void;
+    
+    // Time Travel
+    undo: () => void;
+    redo: () => void;
+    canUndo: () => boolean;
+    canRedo: () => boolean;
 }
 
 export interface ScenarioState {

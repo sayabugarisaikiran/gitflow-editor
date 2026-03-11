@@ -127,6 +127,54 @@ export const useGitStore = create<GitState>((set, get) => {
         bisectMark: (hash, verdict) => runCommand(new BisectMarkCommand(hash, verdict)),
         bisectReset: () => runCommand(new BisectResetCommand()),
         
+        // Time Travel
+        undo: () => {
+            const currentState = get();
+            const stateData: GitStateData = {
+                commits: currentState.commits,
+                branches: currentState.branches,
+                tags: currentState.tags,
+                remoteBranches: currentState.remoteBranches,
+                simulatedRemote: currentState.simulatedRemote,
+                HEAD: currentState.HEAD,
+                currentBranch: currentState.currentBranch,
+                files: currentState.files,
+                terminalHistory: currentState.terminalHistory,
+                stashedFiles: currentState.stashedFiles,
+                selectedCommit: currentState.selectedCommit,
+                activeScenario: currentState.activeScenario,
+                conflictState: currentState.conflictState,
+                mergingTarget: currentState.mergingTarget,
+                bisectState: currentState.bisectState,
+            };
+            const update = engineExecutor.undo(stateData);
+            if (update) set(update);
+        },
+        redo: () => {
+            const currentState = get();
+            const stateData: GitStateData = {
+                commits: currentState.commits,
+                branches: currentState.branches,
+                tags: currentState.tags,
+                remoteBranches: currentState.remoteBranches,
+                simulatedRemote: currentState.simulatedRemote,
+                HEAD: currentState.HEAD,
+                currentBranch: currentState.currentBranch,
+                files: currentState.files,
+                terminalHistory: currentState.terminalHistory,
+                stashedFiles: currentState.stashedFiles,
+                selectedCommit: currentState.selectedCommit,
+                activeScenario: currentState.activeScenario,
+                conflictState: currentState.conflictState,
+                mergingTarget: currentState.mergingTarget,
+                bisectState: currentState.bisectState,
+            };
+            const update = engineExecutor.redo(stateData);
+            if (update) set(update);
+        },
+        canUndo: () => engineExecutor.canUndo(),
+        canRedo: () => engineExecutor.canRedo(),
+
         // UI-only state methods
         selectCommit: (hash: string | null) => set({ selectedCommit: hash }),
     };

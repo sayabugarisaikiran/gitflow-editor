@@ -596,8 +596,29 @@ export default function GitTerminal() {
             {/* Xterm container */}
             <div ref={termRef} className="flex-1 overflow-hidden px-1 py-1 bg-slate-50 dark:bg-transparent" />
 
-            {/* Quick commands */}
-            <div className="px-3 py-2 border-t border-slate-200 dark:border-slate-800/40 bg-white/50 dark:bg-transparent flex flex-wrap gap-1.5 transition-colors duration-300">
+            {/* Quick commands & Time Travel */}
+            <div className="px-3 py-2 border-t border-slate-200 dark:border-slate-800/40 bg-white/50 dark:bg-transparent flex flex-wrap items-center gap-1.5 transition-colors duration-300">
+                {/* Time Travel Controls */}
+                <div className="flex bg-slate-200/50 dark:bg-slate-800/30 rounded border border-slate-200 dark:border-slate-700/50 p-0.5 mr-2">
+                    <button
+                        onClick={() => useGitStore.getState().undo()}
+                        disabled={!useGitStore.getState().canUndo()}
+                        className="text-[10px] font-mono px-2 py-1 rounded text-slate-600 dark:text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-300 hover:bg-slate-100 dark:hover:bg-slate-700/50 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+                        title="Undo last Git action (Time Travel Backward)"
+                    >
+                        ⟲ Undo
+                    </button>
+                    <div className="w-px bg-slate-300 dark:bg-slate-700 mx-0.5 my-1" />
+                    <button
+                        onClick={() => useGitStore.getState().redo()}
+                        disabled={!useGitStore.getState().canRedo()}
+                        className="text-[10px] font-mono px-2 py-1 rounded text-slate-600 dark:text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-300 hover:bg-slate-100 dark:hover:bg-slate-700/50 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+                        title="Redo undid Git action (Time Travel Forward)"
+                    >
+                        ⟳ Redo
+                    </button>
+                </div>
+
                 {['git status', 'git log', 'git branch', 'help', 'clear'].map((cmd) => (
                     <button
                         key={cmd}
