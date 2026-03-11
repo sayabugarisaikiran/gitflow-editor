@@ -44,11 +44,18 @@ function CommitGraphInner() {
 
     // Build React Flow nodes + edges from Zustand state
     const { nodes, edges } = useMemo(() => {
-        // ── Build branch-tip lookup ──
         const branchTips: Record<string, string[]> = {};
+        
+        // Add local branches
         Object.entries(branches).forEach(([branchName, hash]) => {
             if (!branchTips[hash]) branchTips[hash] = [];
             branchTips[hash].push(branchName);
+        });
+
+        // Add remote branches
+        Object.entries(useGitStore.getState().remoteBranches).forEach(([remoteName, hash]) => {
+            if (!branchTips[hash]) branchTips[hash] = [];
+            branchTips[hash].push(remoteName);
         });
 
         // ── Build tag lookup ──

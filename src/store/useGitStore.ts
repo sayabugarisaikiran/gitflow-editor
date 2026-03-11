@@ -2,7 +2,7 @@ import { create } from 'zustand';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
-export type FileStatus = 'unmodified' | 'modified' | 'staged';
+export type FileStatus = 'unmodified' | 'modified' | 'staged' | 'conflicted';
 
 export interface GitFile {
     name: string;
@@ -15,6 +15,7 @@ export interface Commit {
     parentHashes: string[];
     timestamp: number;
     branch: string;
+    filesChanged?: string[];
 }
 
 export interface TerminalLine {
@@ -28,6 +29,8 @@ export interface GitState {
     commits: Commit[];
     branches: Record<string, string>; // branch name → commit hash
     tags: Record<string, string>; // tag name → commit hash
+    remoteBranches: Record<string, string>; // e.g. 'origin/main' → commit hash
+    simulatedRemote: Record<string, string>; // The "server's" branches
     HEAD: string;
     currentBranch: string;
     files: GitFile[];
@@ -35,8 +38,16 @@ export interface GitState {
     stashedFiles: GitFile[];
     selectedCommit: string | null;
     activeScenario: string | null;
+    
+    // Merge Conflict State
+    conflictState: boolean;
+    mergingTarget: string | null;
 
     // Actions
+    fetch: () => void;
+    pull: () => void;
+    push: () => void;
+    resolveConflict: (fileName: string, resolution: 'current' | 'incoming' | 'both') => void;
     stageFile: (fileName: string) => void;
     unstageFile: (fileName: string) => void;
     commit: (message: string) => void;
@@ -67,6 +78,8 @@ export interface ScenarioState {
     commits: Commit[];
     branches: Record<string, string>;
     tags: Record<string, string>;
+    remoteBranches?: Record<string, string>;
+    simulatedRemote?: Record<string, string>;
     HEAD: string;
     currentBranch: string;
     files: GitFile[];
@@ -116,7 +129,11 @@ const initialState = {
     stashedFiles: [] as GitFile[],
     selectedCommit: null as string | null,
     tags: {} as Record<string, string>,
+    remoteBranches: { 'origin/main': initialCommitHash } as Record<string, string>,
+    simulatedRemote: { main: initialCommitHash } as Record<string, string>, // Our "remote server" state
     activeScenario: null as string | null,
+    conflictState: false,
+    mergingTarget: null as string | null,
 };
 
 // ─── Store ───────────────────────────────────────────────────────────────────
@@ -127,7 +144,7 @@ export const useGitStore = create<GitState>((set, get) => ({
     stageFile: (fileName: string) => {
         set((state) => ({
             files: state.files.map((f) =>
-                f.name === fileName && f.status === 'modified'
+                f.name === fileName && (f.status === 'modified' || f.status === 'conflicted')
                     ? { ...f, status: 'staged' as FileStatus }
                     : f
             ),
@@ -157,6 +174,20 @@ export const useGitStore = create<GitState>((set, get) => ({
     commit: (message: string) => {
         const state = get();
         const stagedFiles = state.files.filter((f) => f.status === 'staged');
+        const conflictedFiles = state.files.filter((f) => f.status === 'conflicted');
+
+        if (state.conflictState && conflictedFiles.length > 0) {
+            set({
+                terminalHistory: [
+                    ...state.terminalHistory,
+                    createTerminalLine('command', `git commit -m "${message}"`),
+                    createTerminalLine('error', 'error: Committing is not possible because you have unmerged files.'),
+                    createTerminalLine('info', 'hint: Fix them up in the work tree, and then use \'git add/rm <file>\''),
+                    createTerminalLine('info', 'hint: as appropriate to mark resolution and make a commit.'),
+                ],
+            });
+            return;
+        }
 
         if (stagedFiles.length === 0) {
             set({
@@ -170,12 +201,16 @@ export const useGitStore = create<GitState>((set, get) => ({
         }
 
         const newHash = generateHash();
+        const isMergeCommit = state.conflictState && state.mergingTarget;
+        const parentHashes = isMergeCommit ? [state.HEAD, state.branches[state.mergingTarget!]] : [state.HEAD];
+
         const newCommit: Commit = {
             hash: newHash,
             message,
-            parentHashes: [state.HEAD],
+            parentHashes,
             timestamp: Date.now(),
             branch: state.currentBranch,
+            filesChanged: stagedFiles.map(f => f.name),
         };
 
         set({
@@ -185,6 +220,8 @@ export const useGitStore = create<GitState>((set, get) => ({
                 ...state.branches,
                 [state.currentBranch]: newHash,
             },
+            conflictState: false,     // Reset conflict state on successful commit
+            mergingTarget: null,      // Reset merge target
             files: state.files.map((f) =>
                 f.status === 'staged' ? { ...f, status: 'unmodified' as FileStatus } : f
             ),
@@ -250,6 +287,120 @@ export const useGitStore = create<GitState>((set, get) => ({
                     `error: pathspec '${branchOrHash}' did not match any branch or commit`
                 ),
             ],
+        });
+    },
+
+    fetch: () => {
+        const state = get();
+        
+        // Sync simulatedRemote to remoteBranches
+        const newRemoteBranches: Record<string, string> = { ...state.remoteBranches };
+        let fetchedAny = false;
+        
+        Object.entries(state.simulatedRemote).forEach(([branch, hash]) => {
+            const remoteRef = `origin/${branch}`;
+            if (newRemoteBranches[remoteRef] !== hash) {
+                newRemoteBranches[remoteRef] = hash;
+                fetchedAny = true;
+            }
+        });
+
+        set({
+            remoteBranches: newRemoteBranches,
+            terminalHistory: [
+                ...state.terminalHistory,
+                createTerminalLine('command', 'git fetch'),
+                ...(fetchedAny ? [createTerminalLine('output', 'From origin'), createTerminalLine('output', '   Fetched remote branches.')] : []),
+            ]
+        });
+    },
+
+    push: () => {
+        const state = get();
+        const currentRef = state.branches[state.currentBranch];
+        
+        if (!currentRef) {
+            set({
+                terminalHistory: [
+                    ...state.terminalHistory,
+                    createTerminalLine('command', 'git push'),
+                    createTerminalLine('error', `fatal: The current branch ${state.currentBranch} has no upstream branch.`)
+                ]
+            });
+            return;
+        }
+
+        // Simulating push to 'simulatedRemote' and updating our remote tracking branch
+        const newSimulatedRemote = { ...state.simulatedRemote, [state.currentBranch]: currentRef };
+        const remoteRef = `origin/${state.currentBranch}`;
+        const newRemoteBranches = { ...state.remoteBranches, [remoteRef]: currentRef };
+
+        set({
+            simulatedRemote: newSimulatedRemote,
+            remoteBranches: newRemoteBranches,
+            terminalHistory: [
+                ...state.terminalHistory,
+                createTerminalLine('command', 'git push'),
+                createTerminalLine('output', `To origin`),
+                createTerminalLine('output', `   ${state.currentBranch} -> ${state.currentBranch}`),
+            ]
+        });
+    },
+
+    pull: () => {
+        const state = get();
+        
+        // 1. Fetch
+        const newRemoteBranches: Record<string, string> = { ...state.remoteBranches };
+        Object.entries(state.simulatedRemote).forEach(([branch, hash]) => {
+            const remoteRef = `origin/${branch}`;
+            newRemoteBranches[remoteRef] = hash;
+        });
+
+        const remoteRefForCurrent = `origin/${state.currentBranch}`;
+        const targetHashToMerge = newRemoteBranches[remoteRefForCurrent];
+
+        if (!targetHashToMerge) {
+            set({
+                remoteBranches: newRemoteBranches,
+                terminalHistory: [
+                    ...state.terminalHistory,
+                    createTerminalLine('command', 'git pull'),
+                    createTerminalLine('error', `There is no tracking information for the current branch.`)
+                ]
+            });
+            return;
+        }
+
+        // Apply fetch first
+        set({
+            remoteBranches: newRemoteBranches,
+            terminalHistory: [
+                ...state.terminalHistory,
+                createTerminalLine('command', 'git pull'),
+                createTerminalLine('info', 'Fetching from origin...'),
+            ]
+        });
+
+        // 2. Merge (Using the fetched remote tracking branch)
+        // We will call the standard `merge` function but pass the remote branch ref name.
+        // Wait, `merge` expects a branch name to exist in `state.branches`.
+        // Let's modify `merge` or handle it here. To keep things simple, we can temporarily alias it or let `merge` accept a hash or remote branch in the future.
+        // For Phase 6 requirements, we need `merge` to handle conflicts correctly. We'll update `merge` next to accept remote branches as well.
+        get().merge(remoteRefForCurrent);
+    },
+
+    resolveConflict: (fileName: string, resolution: 'current' | 'incoming' | 'both') => {
+        const state = get();
+        // Just mock changing the file state to staged
+        set({
+            files: state.files.map(f => 
+                f.name === fileName ? { ...f, status: 'staged' as FileStatus } : f
+            ),
+            terminalHistory: [
+                ...state.terminalHistory,
+                createTerminalLine('info', `Resolved conflict in ${fileName} using ${resolution} changes.`),
+            ]
         });
     },
 
@@ -321,8 +472,8 @@ export const useGitStore = create<GitState>((set, get) => ({
     merge: (sourceBranch: string) => {
         const state = get();
 
-        // Validate source branch exists
-        const sourceHash = state.branches[sourceBranch];
+        // Validate source branch exists (local or remote)
+        const sourceHash = state.branches[sourceBranch] || state.remoteBranches[sourceBranch];
         if (!sourceHash) {
             set({
                 terminalHistory: [
@@ -346,18 +497,6 @@ export const useGitStore = create<GitState>((set, get) => ({
             return;
         }
 
-        // Cannot merge branch into itself
-        if (sourceBranch === state.currentBranch) {
-            set({
-                terminalHistory: [
-                    ...state.terminalHistory,
-                    createTerminalLine('command', `git merge ${sourceBranch}`),
-                    createTerminalLine('output', `Already up to date.`),
-                ],
-            });
-            return;
-        }
-
         // Already merged? (source points to same commit or is ancestor)
         if (sourceHash === state.HEAD) {
             set({
@@ -370,7 +509,98 @@ export const useGitStore = create<GitState>((set, get) => ({
             return;
         }
 
-        // Create merge commit with TWO parents
+        if (state.conflictState) {
+            set({
+                terminalHistory: [
+                    ...state.terminalHistory,
+                    createTerminalLine('command', `git merge ${sourceBranch}`),
+                    createTerminalLine('error', 'error: Merging is not possible because you have unmerged files.'),
+                ],
+            });
+            return;
+        }
+
+        // --- Conflict Detection Engine ---
+        // Find common ancestor
+        const headAncestors = new Set<string>();
+        const collectAncestors = (hash: string) => {
+            if (headAncestors.has(hash)) return;
+            headAncestors.add(hash);
+            const commit = state.commits.find((c) => c.hash === hash);
+            if (commit) commit.parentHashes.forEach(collectAncestors);
+        };
+        collectAncestors(state.HEAD);
+
+        // Walk back source branch to find first shared commit
+        let commonAncestor: string | null = null;
+        const sourcePath: string[] = [];
+        
+        // Simple BFS/DFS to find ancestor (assuming simplified graph)
+        const queue = [sourceHash];
+        while (queue.length > 0) {
+            const curr = queue.shift()!;
+            if (headAncestors.has(curr)) {
+                commonAncestor = curr;
+                break;
+            }
+            sourcePath.push(curr);
+            const commit = state.commits.find(c => c.hash === curr);
+            if (commit) queue.push(...commit.parentHashes);
+        }
+
+        if (commonAncestor === sourceHash) {
+            // Fast-forward (source is ancestor, already up to date handled above, but just in case)
+            set({
+                terminalHistory: [
+                    ...state.terminalHistory,
+                    createTerminalLine('command', `git merge ${sourceBranch}`),
+                    createTerminalLine('output', `Already up to date.`),
+                ],
+            });
+            return;
+        }
+
+        // Collect changed files on HEAD vs Common Ancestor
+        const headFilesChanged = new Set<string>();
+        for (const commit of state.commits) {
+            if (headAncestors.has(commit.hash) && commit.hash !== commonAncestor) {
+                commit.filesChanged?.forEach(f => headFilesChanged.add(f));
+            }
+        }
+
+        // Collect changed files on SOURCE vs Common Ancestor
+        const sourceFilesChanged = new Set<string>();
+        for (const hash of sourcePath) {
+            const commit = state.commits.find(c => c.hash === hash);
+            commit?.filesChanged?.forEach(f => sourceFilesChanged.add(f));
+        }
+
+        // Find overlaps
+        const conflicts: string[] = [];
+        sourceFilesChanged.forEach(f => {
+            if (headFilesChanged.has(f)) conflicts.push(f);
+        });
+
+        if (conflicts.length > 0) {
+            // Trigger merge conflict
+            set({
+                conflictState: true,
+                mergingTarget: sourceBranch,
+                files: state.files.map(f => 
+                    conflicts.includes(f.name) ? { ...f, status: 'conflicted' as FileStatus } : f
+                ),
+                terminalHistory: [
+                    ...state.terminalHistory,
+                    createTerminalLine('command', `git merge ${sourceBranch}`),
+                    createTerminalLine('output', `Auto-merging ${conflicts.join(', ')}`),
+                    createTerminalLine('error', `CONFLICT (content): Merge conflict in ${conflicts.join(', ')}`),
+                    createTerminalLine('error', `Automatic merge failed; fix conflicts and then commit the result.`),
+                ],
+            });
+            return;
+        }
+
+        // No conflicts - create merge commit directly
         const mergeHash = generateHash();
         const mergeCommit: Commit = {
             hash: mergeHash,
@@ -378,6 +608,7 @@ export const useGitStore = create<GitState>((set, get) => ({
             parentHashes: [state.HEAD, sourceHash],
             timestamp: Date.now(),
             branch: state.currentBranch,
+            filesChanged: [], // A pure merge commit usually brings in the source's changes, but practically it changes nothing new directly
         };
 
         set({
@@ -817,12 +1048,16 @@ export const useGitStore = create<GitState>((set, get) => ({
             commits: scenario.commits,
             branches: scenario.branches,
             tags: scenario.tags,
+            remoteBranches: scenario.remoteBranches || { 'origin/main': scenario.HEAD },
+            simulatedRemote: scenario.simulatedRemote || { main: scenario.HEAD },
             HEAD: scenario.HEAD,
             currentBranch: scenario.currentBranch,
             files: scenario.files,
             stashedFiles: [],
             selectedCommit: null,
             activeScenario: scenario.id,
+            conflictState: false,
+            mergingTarget: null,
             terminalHistory: [
                 createTerminalLine('info', `🎯 Scenario loaded: ${scenario.name}`),
                 createTerminalLine('info', `On branch ${scenario.currentBranch}`),
@@ -844,6 +1079,8 @@ export const useGitStore = create<GitState>((set, get) => ({
             ],
             branches: { main: freshHash },
             tags: {},
+            remoteBranches: { 'origin/main': freshHash },
+            simulatedRemote: { main: freshHash },
             HEAD: freshHash,
             currentBranch: 'main',
             files: [
@@ -860,6 +1097,8 @@ export const useGitStore = create<GitState>((set, get) => ({
             stashedFiles: [],
             selectedCommit: null,
             activeScenario: null,
+            conflictState: false,
+            mergingTarget: null,
         });
     },
 }));

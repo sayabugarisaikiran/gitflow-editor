@@ -11,6 +11,7 @@ import {
     useSensors,
 } from '@dnd-kit/core';
 import { useGitStore } from '../store/useGitStore';
+import ConflictResolverModal from './ConflictResolverModal';
 
 // ─── Draggable File Item ────────────────────────────────────────────────────
 
@@ -110,6 +111,12 @@ function DroppableZone({ id, children, label, color, count, isEmpty, emptyText, 
             ring: 'ring-emerald-500/40 border-emerald-500/30',
             bg: 'bg-emerald-500/5',
         },
+        yellow: {
+            dot: 'bg-amber-400',
+            badge: 'bg-amber-500/20 text-amber-300',
+            ring: 'ring-amber-500/40 border-amber-500/30',
+            bg: 'bg-amber-500/5',
+        },
     };
     const c = colorMap[color];
 
@@ -125,7 +132,7 @@ function DroppableZone({ id, children, label, color, count, isEmpty, emptyText, 
       `}
         >
             {/* Section header */}
-            <h3 className={`flex items-center gap-2 text-[11px] font-bold uppercase tracking-widest ${color === 'red' ? 'text-red-400/80' : 'text-emerald-400/80'} mb-2 px-1`}>
+            <h3 className={`flex items-center gap-2 text-[11px] font-bold uppercase tracking-widest ${color === 'red' ? 'text-red-400/80' : color === 'yellow' ? 'text-amber-400/80' : 'text-emerald-400/80'} mb-2 px-1`}>
                 <span className={`w-1.5 h-1.5 rounded-full ${c.dot}`} />
                 {label}
                 {count > 0 && (
@@ -137,7 +144,7 @@ function DroppableZone({ id, children, label, color, count, isEmpty, emptyText, 
 
             {/* Drop zone hint */}
             {isOver && (
-                <div className={`text-center text-[10px] ${color === 'red' ? 'text-red-400/60' : 'text-emerald-400/60'} py-1 animate-pulse`}>
+                <div className={`text-center text-[10px] ${color === 'red' ? 'text-red-400/60' : color === 'yellow' ? 'text-amber-400/60' : 'text-emerald-400/60'} py-1 animate-pulse`}>
                     ↓ Drop here ↓
                 </div>
             )}
@@ -220,11 +227,13 @@ function CommitModal({ onClose, onCommit }: { onClose: () => void; onCommit: (ms
 // ─── Main FileExplorer Component ────────────────────────────────────────────
 
 export default function FileExplorer() {
-    const { files, commits, currentBranch, stageFile, unstageFile, commit, modifyFile, addFile } = useGitStore();
+    const { files, commits, currentBranch, stageFile, unstageFile, commit, modifyFile, addFile, conflictState } = useGitStore();
     const [draggedItem, setDraggedItem] = useState<{ fileName: string; status: string } | null>(null);
     const [overZone, setOverZone] = useState<string | null>(null);
     const [showCommitModal, setShowCommitModal] = useState(false);
+    const [resolvingFile, setResolvingFile] = useState<string | null>(null);
 
+    const conflictedFiles = files.filter((f) => f.status === 'conflicted');
     const modifiedFiles = files.filter((f) => f.status === 'modified');
     const stagedFiles = files.filter((f) => f.status === 'staged');
     const unmodifiedFiles = files.filter((f) => f.status === 'unmodified');
@@ -292,6 +301,44 @@ export default function FileExplorer() {
                     onDragEnd={handleDragEnd}
                     onDragCancel={() => { setDraggedItem(null); setOverZone(null); }}
                 >
+                    {/* Unmerged Paths */}
+                    {conflictState && (
+                         <div className="mb-4 bg-red-500/5 border border-red-500/20 rounded-lg p-3 animate-pulse-glow">
+                             <h3 className="flex items-center gap-2 text-[11px] font-bold uppercase tracking-widest text-red-400 mb-2 px-1">
+                                 <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                     <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                                 </svg>
+                                 Unmerged Paths
+                                 <span className="ml-auto text-[10px] bg-red-500/20 text-red-300 px-1.5 py-0.5 rounded-full">
+                                     {conflictedFiles.length}
+                                 </span>
+                             </h3>
+                             {conflictedFiles.length === 0 ? (
+                                 <p className="text-[10px] text-red-300/80 px-1 py-1 italic">
+                                     All conflicts resolved. Type 'git commit' to complete merge.
+                                 </p>
+                             ) : (
+                                 <div className="space-y-1 mt-2">
+                                     {conflictedFiles.map(file => (
+                                         <button
+                                             key={file.name}
+                                             onClick={() => setResolvingFile(file.name)}
+                                             className="w-full flex items-center justify-between gap-2 px-2.5 py-2 rounded border border-red-500/40 bg-red-500/10 hover:bg-red-500/20 transition-colors text-left group"
+                                         >
+                                             <span className="flex items-center gap-2 text-xs font-mono text-red-300">
+                                                 <span className="text-red-400 text-[10px]">!</span>
+                                                 {file.name}
+                                             </span>
+                                             <span className="text-[10px] text-red-300 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                 Resolve →
+                                             </span>
+                                         </button>
+                                     ))}
+                                 </div>
+                             )}
+                         </div>
+                    )}
+
                     {/* Working Directory */}
                     <DroppableZone
                         id="working-zone"
@@ -443,6 +490,14 @@ export default function FileExplorer() {
                 <CommitModal
                     onClose={() => setShowCommitModal(false)}
                     onCommit={handleCommit}
+                />
+            )}
+
+            {/* Conflict Resolver Modal */}
+            {resolvingFile && (
+                <ConflictResolverModal
+                    fileName={resolvingFile}
+                    onClose={() => setResolvingFile(null)}
                 />
             )}
         </div>

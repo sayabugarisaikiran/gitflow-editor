@@ -41,6 +41,12 @@ const BRANCH_COLORS: Record<string, { bg: string; text: string; border: string; 
         border: 'border-amber-500/40',
         glow: 'shadow-amber-500/30',
     },
+    origin: {
+        bg: 'bg-red-500/20',
+        text: 'text-red-300',
+        border: 'border-red-500/40',
+        glow: 'shadow-red-500/30',
+    },
 };
 
 const DEFAULT_BRANCH_COLOR = {

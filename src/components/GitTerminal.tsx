@@ -62,6 +62,9 @@ function parseCommand(input: string): void {
                 { type: 'output', text: '  git branch -d <name>     Delete a branch', timestamp: Date.now() },
                 { type: 'output', text: '  git checkout <branch>    Switch branches', timestamp: Date.now() },
                 { type: 'output', text: '  git checkout -b <name>   Create & switch branch', timestamp: Date.now() },
+                { type: 'output', text: '  git fetch                Download objects and refs from another repository', timestamp: Date.now() },
+                { type: 'output', text: '  git pull                 Fetch from and integrate with another repository or a local branch', timestamp: Date.now() },
+                { type: 'output', text: '  git push                 Update remote refs along with associated objects', timestamp: Date.now() },
                 { type: 'output', text: '  git merge <branch>       Merge branch into HEAD', timestamp: Date.now() },
                 { type: 'output', text: '  git rebase <branch>      Rebase onto branch', timestamp: Date.now() },
                 { type: 'output', text: '  git cherry-pick <hash>   Copy commit to branch', timestamp: Date.now() },
@@ -248,6 +251,18 @@ function parseCommand(input: string): void {
                     ],
                 }));
             }
+            break;
+
+        case 'fetch':
+            store.fetch();
+            break;
+
+        case 'pull':
+            store.pull();
+            break;
+
+        case 'push':
+            store.push();
             break;
 
         case 'log':
