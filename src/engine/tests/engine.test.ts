@@ -6,8 +6,7 @@ import {
     CreateBranchCommand, 
     AddFileCommand,
     StageFileCommand,
-    generateHash,
-    createTerminalLine
+    generateHash
 } from '../index.js';
 
 describe('Git Engine', () => {

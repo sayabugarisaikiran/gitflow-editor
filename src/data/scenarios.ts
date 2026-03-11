@@ -1,4 +1,4 @@
-import type { ScenarioState } from '../store/useGitStore';
+import type { ScenarioState } from '../engine';
 
 // ─── Pre-built Scenarios ─────────────────────────────────────────────────────
 

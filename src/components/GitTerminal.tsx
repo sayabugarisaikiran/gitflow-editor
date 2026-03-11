@@ -2,7 +2,8 @@ import { useRef, useEffect, useCallback } from 'react';
 import { Terminal } from '@xterm/xterm';
 import { FitAddon } from '@xterm/addon-fit';
 import '@xterm/xterm/css/xterm.css';
-import { useGitStore, type TerminalLine } from '../store/useGitStore';
+import { useGitStore } from '../store/useGitStore';
+import type { TerminalLine } from '../engine';
 import { useSettingsStore } from '../store/useSettingsStore';
 
 // ─── ANSI color helpers ──────────────────────────────────────────────────────

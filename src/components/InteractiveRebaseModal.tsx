@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useGitStore } from '../store/useGitStore';
-import type { Commit } from '../store/useGitStore';
+import type { Commit } from '../engine';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 

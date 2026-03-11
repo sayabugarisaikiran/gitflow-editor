@@ -1,5 +1,5 @@
 import { useGitStore } from '../store/useGitStore';
-import type { BisectState } from '../store/useGitStore';
+import type { BisectState } from '../engine';
 
 // ─── Bisect Panel ────────────────────────────────────────────────────────────
 

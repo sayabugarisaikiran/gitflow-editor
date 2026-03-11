@@ -5,7 +5,7 @@ import { generateHash, createTerminalLine } from '../utils.js';
 export class LoadScenarioCommand implements GitCommand {
     constructor(private scenario: ScenarioState) {}
 
-    execute({ state }: CommandContext): Partial<GitStateData> {
+    execute(): Partial<GitStateData> {
         return {
             commits: this.scenario.commits,
             branches: this.scenario.branches,
