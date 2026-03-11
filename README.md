@@ -2,7 +2,7 @@
 
 **GitFlow Editor** is a powerful, interactive Git simulation and educational tool designed to help developers master Git workflows visually. Instead of just reading about branches and merges, users can manipulate a live DAG (Directed Acyclic Graph) and see exactly how Git works under the hood.
 
-![Onboarding Tour](public/screenshots/onboarding.png)
+![GitFlow Editor Demonstration](public/demo.webp)
 
 ## 🚀 Key Features
 
